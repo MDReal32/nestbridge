@@ -13,9 +13,6 @@ permissions:
   contents: read
 
 env:
-  # Trusted publishing needs npm >= 11.5.1, which is only bundled by default
-  # on Node 24+ (Node 22's bundled npm is ~10.x and has no OIDC support at
-  # all — it fails fast with ENEEDAUTH instead of falling back to it).
   NODE_VERSION: '24'
 
 jobs:
@@ -85,8 +82,6 @@ jobs:
       - name: Test
         run: yarn nx run-many -t test
 
-      # Builds every publishable package plus everything it depends on
-      # (core, runtime, vite, nestbridge), in Nx's own dependency order.
       - name: Build publishable packages
         run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
 
@@ -109,19 +104,6 @@ jobs:
             echo "Verified artifacts in $dir"
           done
 
-      # Published strictly in dependency order: core and runtime have no
-      # interdependency, vite depends on both, and the nestbridge umbrella
-      # depends on runtime and vite, so it must publish last.
-      #
-      # Auth is npm OIDC Trusted Publishing (id-token: write above) — no
-      # NPM_TOKEN/YARN_NPM_AUTH_TOKEN secret exists anywhere in this repo.
-      # Plain `npm publish` is used deliberately instead of `yarn npm
-      # publish`: Yarn Berry's own OIDC support still has open bugs
-      # (publish fails with "No authentication configured for request"
-      # even with a correctly configured Trusted Publisher), while npm's
-      # CLI OIDC handshake is well supported. Each package is checked
-      # against the registry first so re-running this job (e.g. after an
-      # unrelated push once nothing is pending) is a safe no-op.
       - name: Publish packages to npm
         run: |
           set -euo pipefail
