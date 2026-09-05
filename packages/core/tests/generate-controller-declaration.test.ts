@@ -92,4 +92,43 @@ describe('generateControllerDeclaration', () => {
       "findOne(...args: Parameters<__ServerInferredReturnTypeController['findOne']>): RemoteResult<__ServerInferredReturnTypeController['findOne']>;",
     );
   });
+
+  it('projects an Observable-returning method through RemoteObservableResult', () => {
+    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/streaming.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      "watch(...args: Parameters<__ServerStreamingController['watch']>): RemoteObservableResult<__ServerStreamingController['watch']>;",
+    );
+  });
+
+  it('projects a StreamableFile-returning method through RemoteStreamResult', () => {
+    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/streaming.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      "download(...args: Parameters<__ServerStreamingController['download']>): RemoteStreamResult<__ServerStreamingController['download']>;",
+    );
+    expect(declaration).toContain(
+      "downloadAsync(...args: Parameters<__ServerStreamingController['downloadAsync']>): RemoteStreamResult<__ServerStreamingController['downloadAsync']>;",
+    );
+  });
+
+  it('imports only the RemoteResult helpers actually used by the controller', () => {
+    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/streaming.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      "import type { RemoteObservableResult, RemoteResult, RemoteStreamResult } from '@nestbridge/runtime';",
+    );
+  });
 });

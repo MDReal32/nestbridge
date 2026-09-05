@@ -83,6 +83,21 @@ describe('graphqlRequest', () => {
     );
   });
 
+  it('builds a readable message instead of dumping the raw response/request', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ errors: [{ message: 'Not Found' }] }));
+    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+
+    const error = await graphqlRequest({ document: 'query { missing }' }).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect((error as NestBridgeGraphqlError).message).toBe(
+      'NestBridge GraphQL request to https://api.example.com/graphql failed with status 200. Not Found',
+    );
+  });
+
   it('carries the GraphQL errors on NestBridgeGraphqlError', async () => {
     const fetchMock = vi
       .fn()

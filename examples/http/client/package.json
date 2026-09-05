@@ -1,0 +1,23 @@
+{
+  "name": "http-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@nestbridge/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@nestbridge/vite": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^5.0.0"
+  }
+}

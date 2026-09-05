@@ -135,11 +135,11 @@ shows you the real method signatures.
 - `@nestbridge/core` never depends on Vite, and `@nestbridge/runtime` never
   depends on NestJS — see [Architectural constraints](#architectural-constraints).
 
-The [`examples/basic`](examples/basic) app includes an automated test
-(`examples/basic/client/tests/bundle-verification.test.ts`) that builds the
-client and asserts the production bundle contains none of `@nestjs/common`,
-`@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, or the real
-service implementation.
+Each app under [`examples/`](examples) (`http`, `graphql`, `observable`,
+`streamable-file`) includes an automated test (`client/tests/bundle-verification.test.ts`)
+that builds the client and asserts the production bundle contains none of
+`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`,
+or the real service implementation.
 
 ## Installation
 
@@ -203,8 +203,8 @@ instead:
 NestBridge mirrors each controller's path under `<root>/.nestbridge/`,
 relative to your Vite project root, stripping any leading `../` segments. For
 a controller glob of `../server/src/**/*.controller.ts` resolved from a
-client at `examples/basic/client`, `users.controller.ts` ends up at
-`.nestbridge/server/src/users/users.controller.d.ts` — hence the `paths`
+client at `examples/http/client`, `items.controller.ts` ends up at
+`.nestbridge/server/src/items/items.controller.d.ts` — hence the `paths`
 entry above. Add `.nestbridge/` to your `.gitignore`; it's generated on every
 build and on every dev-server start.
 
@@ -345,12 +345,12 @@ exactly as declared in the controller — even though at runtime `users` is a
 plain object that calls `fetch()`. `usersResolver.findOne` works the same
 way, except at runtime it sends a GraphQL request instead.
 
-See [`examples/basic`](examples/basic) for a complete, runnable version of
-this (NestJS server + Vite client), including a
-[typecheck fixture](examples/basic/client/typecheck-fixtures/api-contract.ts)
-that proves both the valid call above and two invalid calls
-(`users.findOne(123)`, `new UsersController(anything)`) resolve exactly as
-the architecture promises.
+See [`examples/http`](examples/http) for a complete, runnable version of the
+REST side (NestJS server + Vite client), and [`examples/graphql`](examples/graphql)
+for the resolver side. Each includes a
+[typecheck fixture](examples/http/client/typecheck-fixtures/api-contract.ts)
+that proves both a valid call and invalid calls (a wrong-typed argument, an
+unexpected constructor argument) resolve exactly as the architecture promises.
 
 ## Supported decorators
 
@@ -564,7 +564,7 @@ this the same way esbuild/SWC-based NestJS setups generally do: explicit
 ## Commands
 
 ```bash
-yarn nx build core         # or runtime / vite / basic-server / basic-client
+yarn nx build core         # or runtime / vite / http-server / http-client / ...
 yarn nx test core
 yarn nx typecheck core
 yarn nx lint core
@@ -574,8 +574,8 @@ yarn test                  # nx run-many -t test
 yarn typecheck             # nx run-many -t typecheck
 yarn lint                  # nx run-many -t lint
 
-yarn nx run basic-server:start   # run the example NestJS server
-yarn nx run basic-client:dev     # run the example Vite dev server
+yarn nx run http-server:start   # run an example NestJS server
+yarn nx run http-client:dev     # run its Vite dev server
 ```
 
 ## Limitations

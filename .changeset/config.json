@@ -7,5 +7,15 @@
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
-  "ignore": ["@nestbridge/monorepo", "basic-client", "basic-server"]
+  "ignore": [
+    "@nestbridge/monorepo",
+    "http-client",
+    "http-server",
+    "graphql-client",
+    "graphql-server",
+    "observable-client",
+    "observable-server",
+    "streamable-file-client",
+    "streamable-file-server"
+  ]
 }

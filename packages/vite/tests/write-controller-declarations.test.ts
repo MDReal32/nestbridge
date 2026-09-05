@@ -44,6 +44,7 @@ describe('writeControllerDeclarations', () => {
             parameterName: 'id',
           },
         ],
+        responseKind: 'json',
         line: 1,
         column: 1,
       },

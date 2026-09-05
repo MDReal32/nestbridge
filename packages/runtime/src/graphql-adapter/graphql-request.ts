@@ -19,7 +19,7 @@ export const graphqlRequest = async <T>(nestBridgeGraphqlRequest: NestBridgeGrap
     );
   } catch (error) {
     if (error instanceof ClientError) {
-      throw new NestBridgeGraphqlError(error);
+      throw new NestBridgeGraphqlError(error, endpoint);
     }
 
     throw error;

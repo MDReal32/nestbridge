@@ -116,6 +116,42 @@ describe('request', () => {
     expect((error as NestBridgeError).message).toContain('User not found');
   });
 
+  it('resolves to a Blob when responseType is "blob"', async () => {
+    const blob = new Blob(['file contents'], { type: 'application/octet-stream' });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(blob, {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' },
+      }),
+    );
+    configureNestBridge({ fetch: fetchMock });
+
+    const result = await request<Blob>({
+      method: 'GET',
+      path: '/users/1/download',
+      responseType: 'blob',
+    });
+
+    expect(result).toBeInstanceOf(Blob);
+    expect(await (result as Blob).text()).toBe('file contents');
+  });
+
+  it('still parses a JSON error body for a failed blob request', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: 'Not Found' }, { status: 404 }));
+    configureNestBridge({ fetch: fetchMock });
+
+    const error = await request({
+      method: 'GET',
+      path: '/users/missing/download',
+      responseType: 'blob',
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(NestBridgeError);
+    expect((error as NestBridgeError).body).toEqual({ message: 'Not Found' });
+  });
+
   it('uses a custom fetch implementation when configured', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
     configureNestBridge({ fetch: fetchMock });

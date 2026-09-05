@@ -12,7 +12,7 @@ export interface UnwrappedTypeNode {
   isNullable: boolean;
 }
 
-const unwrapPromise = (typeNode: ts.TypeNode): ts.TypeNode => {
+export const unwrapPromise = (typeNode: ts.TypeNode): ts.TypeNode => {
   if (
     ts.isTypeReferenceNode(typeNode) &&
     ts.isIdentifier(typeNode.typeName) &&

@@ -121,4 +121,24 @@ describe('analyzeControllers', () => {
     expect(diagnostics).toEqual([]);
     expect(controllers[0]?.methods.map((method) => method.name)).toContain('findOne');
   });
+
+  it('defaults a method\'s responseKind to "json"', () => {
+    const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
+    const method = controllers[0]?.methods.find((candidate) => candidate.name === 'findOne');
+
+    expect(method?.responseKind).toBe('json');
+  });
+
+  it.each([
+    ['watch', 'observable'],
+    ['download', 'stream'],
+    ['downloadAsync', 'stream'],
+    ['plain', 'json'],
+  ])('detects %s as responseKind %s, without a diagnostic', (methodName, responseKind) => {
+    const { controllers, diagnostics } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const method = controllers[0]?.methods.find((candidate) => candidate.name === methodName);
+
+    expect(diagnostics).toEqual([]);
+    expect(method?.responseKind).toBe(responseKind);
+  });
 });

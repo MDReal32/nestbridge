@@ -51,6 +51,14 @@ describe('generateResolverModule', () => {
     expect(code).toContain('variables: { "id": id }');
   });
 
+  it('unwraps the GraphQL response down to the field the method calls', () => {
+    const code = generateResolverModule(resolver([method({})]));
+
+    expect(code).toContain('async findOne() {');
+    expect(code).toContain('const result = await graphqlRequest({');
+    expect(code).toContain('return result.findOne;');
+  });
+
   it('omits the variables property when the method has no arguments', () => {
     const code = generateResolverModule(resolver([method({})]));
 
@@ -80,6 +88,7 @@ describe('generateResolverModule', () => {
     expect(code).toContain(
       'document: "mutation Create($name: String!) { createUser(name: $name) { id } }"',
     );
+    expect(code).toContain('return result.createUser;');
   });
 
   it('renders nested selection sets', () => {

@@ -4,4 +4,5 @@ export interface NestBridgeRequest {
   query?: Record<string, unknown>;
   body?: unknown;
   headers?: Record<string, string | undefined>;
+  responseType?: 'json' | 'blob';
 }

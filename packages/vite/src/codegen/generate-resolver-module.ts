@@ -27,10 +27,12 @@ const generateMethod = (method: ResolverMethodDefinition) => {
   }
 
   return [
-    `  ${method.name}(${generateResolverArgumentList(method.arguments)}) {`,
-    '    return graphqlRequest({',
+    `  async ${method.name}(${generateResolverArgumentList(method.arguments)}) {`,
+    '    const result = await graphqlRequest({',
     ...requestProperties.map((property) => `      ${property},`),
     '    });',
+    '',
+    `    return result.${method.operationName};`,
     '  }',
   ].join('\n');
 };

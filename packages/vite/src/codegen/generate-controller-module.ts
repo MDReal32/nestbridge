@@ -26,6 +26,10 @@ const generateMethod = (method: ControllerMethodDefinition) => {
     requestProperties.push(`headers: ${headersExpression}`);
   }
 
+  if (method.responseKind === 'stream') {
+    requestProperties.push(`responseType: "blob"`);
+  }
+
   return [
     `  ${method.name}(${generateParameterList(method.parameters)}) {`,
     '    return request({',

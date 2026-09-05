@@ -19,9 +19,8 @@ export const request = async <T>(nestBridgeRequest: NestBridgeRequest) => {
     body: hasBody ? JSON.stringify(nestBridgeRequest.body) : undefined,
   });
 
-  const responseBody = await parseResponseBody(response);
-
   if (!response.ok) {
+    const responseBody = await parseResponseBody(response);
     const backendMessage = extractErrorMessage(responseBody);
     const message = `NestBridge request to ${url} failed with status ${response.status}.${
       backendMessage === undefined ? '' : ` ${backendMessage}`
@@ -30,5 +29,9 @@ export const request = async <T>(nestBridgeRequest: NestBridgeRequest) => {
     throw new NestBridgeError(message, response.status, responseBody, response);
   }
 
-  return responseBody as T;
+  if (nestBridgeRequest.responseType === 'blob') {
+    return (await response.blob()) as T;
+  }
+
+  return (await parseResponseBody(response)) as T;
 };

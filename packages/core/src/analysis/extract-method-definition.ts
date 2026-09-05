@@ -8,6 +8,7 @@ import {
 } from './decorator-inspection';
 import { extractParameterDefinition } from './extract-parameter-definition';
 import { locationOf } from './node-location';
+import { readResponseKind } from './read-response-kind';
 import { joinRoutePath } from './route-path';
 
 interface ExtractionContext {
@@ -78,6 +79,7 @@ export const extractMethodDefinition = (
     httpMethod,
     path: joinRoutePath(context.controllerPath, routeArgument.value),
     parameters: parameters.filter((parameter) => parameter !== undefined),
+    responseKind: readResponseKind(method.type),
     line: location.line,
     column: location.column,
   };

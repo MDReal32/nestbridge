@@ -12,6 +12,7 @@ export type {
   ResolverArgumentDefinition,
   ResolverDefinition,
   ResolverMethodDefinition,
+  ResponseKind,
   SelectionField,
 } from './models';
 export { VERSION } from './version';

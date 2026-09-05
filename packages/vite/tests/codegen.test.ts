@@ -7,6 +7,7 @@ const method = (overrides: Partial<ControllerMethodDefinition>): ControllerMetho
   httpMethod: 'GET',
   path: '/users/:id',
   parameters: [],
+  responseKind: 'json',
   line: 1,
   column: 1,
   ...overrides,
@@ -138,6 +139,30 @@ describe('generateControllerModule', () => {
     expect(code).not.toContain('query:');
     expect(code).not.toContain('body:');
     expect(code).not.toContain('headers:');
+  });
+
+  it('requests a blob response for a StreamableFile-returning method', () => {
+    const code = generateControllerModule(
+      controller([
+        method({ name: 'download', path: '/users/:id/download', responseKind: 'stream' }),
+      ]),
+    );
+
+    expect(code).toContain('responseType: "blob"');
+  });
+
+  it('omits responseType for a json-returning method', () => {
+    const code = generateControllerModule(controller([method({})]));
+
+    expect(code).not.toContain('responseType:');
+  });
+
+  it('omits responseType for an Observable-returning method', () => {
+    const code = generateControllerModule(
+      controller([method({ name: 'watch', responseKind: 'observable' })]),
+    );
+
+    expect(code).not.toContain('responseType:');
   });
 
   it('orders generated function parameters by declared index', () => {
