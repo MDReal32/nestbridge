@@ -1,20 +1,10 @@
 import ts from 'typescript';
+import { readTypeThunkExpression } from './read-type-thunk-expression';
 
 export interface ArgsTypeOption {
   typeName: string;
   isArray: boolean;
 }
-
-const returnedExpressionOf = (
-  thunk: ts.ArrowFunction | ts.FunctionExpression,
-): ts.Expression | undefined => {
-  if (!ts.isBlock(thunk.body)) {
-    return thunk.body;
-  }
-
-  const returnStatement = thunk.body.statements.find(ts.isReturnStatement);
-  return returnStatement?.expression;
-};
 
 export const readArgsTypeOption = (decorator: ts.Decorator): ArgsTypeOption | undefined => {
   if (!ts.isCallExpression(decorator.expression)) {
@@ -44,7 +34,7 @@ export const readArgsTypeOption = (decorator: ts.Decorator): ArgsTypeOption | un
     return undefined;
   }
 
-  const returnedExpression = returnedExpressionOf(thunk);
+  const returnedExpression = readTypeThunkExpression(thunk);
 
   if (returnedExpression === undefined) {
     return undefined;

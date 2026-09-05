@@ -8,6 +8,7 @@ import { extractSelectionFields } from './extract-selection-fields';
 import { unwrapTypeNode } from './graphql-scalar-type';
 import { locationOf } from './node-location';
 import { readGraphqlOperationName } from './read-graphql-operation-name';
+import { readGraphqlReturnTypeOption } from './read-graphql-return-type-option';
 import { resolveClassDeclaration } from './resolve-type-declaration';
 
 const PRIMITIVE_SCALAR_NAMES = new Set(['string', 'number', 'boolean']);
@@ -60,31 +61,19 @@ export const extractResolverMethodDefinition = (
     return undefined;
   }
 
-  if (method.type === undefined) {
+  const decoratorReturnType = readGraphqlReturnTypeOption(decorator);
+  const identifierText =
+    decoratorReturnType ??
+    (method.type === undefined ? undefined : unwrapTypeNode(method.type)?.identifierText);
+
+  if (identifierText === undefined) {
     context.diagnostics.push({
       code: 'unsupported-return-type',
       title: 'Unsupported return type.',
       controllerName: context.resolverName,
       memberName: methodName,
       detail:
-        'GraphQL resolver methods need an explicit return type annotation so NestBridge can build a selection set.',
-      filePath: context.filePath,
-      line: location.line,
-      column: location.column,
-    });
-    return undefined;
-  }
-
-  const unwrapped = unwrapTypeNode(method.type);
-
-  if (unwrapped === undefined) {
-    context.diagnostics.push({
-      code: 'unsupported-return-type',
-      title: 'Unsupported return type.',
-      controllerName: context.resolverName,
-      memberName: methodName,
-      detail: 'NestBridge cannot statically resolve this return type to a GraphQL selection set.',
-      found: method.type.getText(),
+        'GraphQL resolver methods need a type thunk on @Query()/@Mutation() (e.g. "() => UserType") or an explicit return type annotation so NestBridge can build a selection set.',
       filePath: context.filePath,
       line: location.line,
       column: location.column,
@@ -94,20 +83,16 @@ export const extractResolverMethodDefinition = (
 
   let selection: SelectionField[] = [];
 
-  if (!PRIMITIVE_SCALAR_NAMES.has(unwrapped.identifierText)) {
-    const resolved = resolveClassDeclaration(
-      unwrapped.identifierText,
-      context.sourceFile,
-      context.filePath,
-    );
+  if (!PRIMITIVE_SCALAR_NAMES.has(identifierText.toLowerCase())) {
+    const resolved = resolveClassDeclaration(identifierText, context.sourceFile, context.filePath);
 
-    if (resolved === undefined) {
+    if (resolved === undefined && decoratorReturnType === undefined) {
       context.diagnostics.push({
         code: 'unsupported-return-type',
         title: 'Unsupported return type.',
         controllerName: context.resolverName,
         memberName: methodName,
-        detail: `NestBridge could not locate the declaration of type "${unwrapped.identifierText}".`,
+        detail: `NestBridge could not locate the declaration of type "${identifierText}".`,
         filePath: context.filePath,
         line: location.line,
         column: location.column,
@@ -115,23 +100,25 @@ export const extractResolverMethodDefinition = (
       return undefined;
     }
 
-    const fields = extractSelectionFields(
-      resolved.classDeclaration,
-      resolved.sourceFile,
-      resolved.filePath,
-      {
-        resolverName: context.resolverName,
-        methodName,
-        diagnostics: context.diagnostics,
-        visitedTypeNames: new Set(),
-      },
-    );
+    if (resolved !== undefined) {
+      const fields = extractSelectionFields(
+        resolved.classDeclaration,
+        resolved.sourceFile,
+        resolved.filePath,
+        {
+          resolverName: context.resolverName,
+          methodName,
+          diagnostics: context.diagnostics,
+          visitedTypeNames: new Set(),
+        },
+      );
 
-    if (fields === undefined) {
-      return undefined;
+      if (fields === undefined) {
+        return undefined;
+      }
+
+      selection = fields;
     }
-
-    selection = fields;
   }
 
   const args = method.parameters.map((parameter, index) =>

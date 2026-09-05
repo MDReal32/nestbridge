@@ -74,4 +74,30 @@ describe('analyzeResolvers', () => {
     expect(method?.line).toBeGreaterThan(0);
     expect(method?.column).toBeGreaterThan(0);
   });
+
+  it('builds a selection set from the @Query() type thunk alone, without a return type annotation', () => {
+    const { resolvers, diagnostics } = analyzeResolvers([
+      fixture('decorator-return-type.resolver.ts'),
+    ]);
+
+    expect(diagnostics).toEqual([]);
+    const method = resolvers[0]?.methods.find((candidate) => candidate.name === 'findOne');
+
+    expect(method?.selection).toEqual([
+      { name: 'id' },
+      { name: 'name' },
+      { name: 'profile', children: [{ name: 'bio' }] },
+    ]);
+  });
+
+  it('uses an empty selection set for a scalar type derived from the @Query() type thunk alone', () => {
+    const { resolvers, diagnostics } = analyzeResolvers([
+      fixture('decorator-return-type.resolver.ts'),
+    ]);
+
+    expect(diagnostics).toEqual([]);
+    const method = resolvers[0]?.methods.find((candidate) => candidate.name === 'ping');
+
+    expect(method?.selection).toEqual([]);
+  });
 });

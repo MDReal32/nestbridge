@@ -79,14 +79,14 @@ describe('diagnostics', () => {
     expect(diagnostics[0]?.detail).toContain('@Args');
   });
 
-  it('reports an unsupported-return-type diagnostic for a missing resolver return type annotation', () => {
-    const { diagnostics } = analyzeResolvers([fixture('missing-return-type.resolver.ts')]);
+  it('reports an unsupported-return-type diagnostic when neither a decorator type thunk nor a return type annotation is present', () => {
+    const { diagnostics } = analyzeResolvers([fixture('no-return-type-source.resolver.ts')]);
 
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({
       code: 'unsupported-return-type',
-      controllerName: 'MissingReturnTypeResolver',
-      memberName: 'echo',
+      controllerName: 'NoReturnTypeSourceResolver',
+      memberName: 'ping',
     });
   });
 
