@@ -1,5 +1,8 @@
 # nestbridge
 
+[![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/nestbridge.svg)](https://www.npmjs.com/package/nestbridge)
+
 A single-package convenience entry point for NestBridge. It re-exports the
 runtime API and the Vite plugin so you can depend on one package instead of
 wiring up `@nestbridge/runtime` and `@nestbridge/vite` separately. See the

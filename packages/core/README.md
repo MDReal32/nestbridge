@@ -1,5 +1,8 @@
 # @nestbridge/core
 
+[![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@nestbridge/core.svg)](https://www.npmjs.com/package/@nestbridge/core)
+
 Static analysis of NestJS controllers, and generation of the client-facing
 `.d.ts` declarations that make them safely importable from the browser.
 

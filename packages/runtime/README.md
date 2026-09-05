@@ -1,5 +1,8 @@
 # @nestbridge/runtime
 
+[![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@nestbridge/runtime.svg)](https://www.npmjs.com/package/@nestbridge/runtime)
+
 The browser-side `fetch()` client that NestBridge's generated controller
 modules call into. Zero dependencies, and no knowledge of NestJS or Vite —
 see the [repository README](../../README.md) for how this fits into the rest

@@ -1,5 +1,7 @@
 # NestBridge
 
+[![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
+
 NestBridge is a typed client bridge for NestJS controllers.
 
 It lets frontend code import a NestJS controller directly, keep full TypeScript

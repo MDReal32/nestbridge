@@ -1,5 +1,8 @@
 # @nestbridge/vite
 
+[![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@nestbridge/vite.svg)](https://www.npmjs.com/package/@nestbridge/vite)
+
 A Vite plugin that lets frontend code import a NestJS controller directly —
 keeping full TypeScript autocomplete against its real method signatures,
 while the browser only ever receives a generated `fetch()` call. See the
