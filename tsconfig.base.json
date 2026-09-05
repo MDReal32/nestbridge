@@ -23,7 +23,9 @@
     "paths": {
       "@nestbridge/core": ["packages/core/src/index.ts"],
       "@nestbridge/runtime": ["packages/runtime/src/index.ts"],
-      "@nestbridge/vite": ["packages/vite/src/index.ts"]
+      "@nestbridge/vite": ["packages/vite/src/index.ts"],
+      "nestbridge": ["packages/nestbridge/src/index.ts"],
+      "nestbridge/vite": ["packages/nestbridge/src/vite.ts"]
     }
   }
 }

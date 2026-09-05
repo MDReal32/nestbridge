@@ -49,7 +49,7 @@
   },
   "overrides": [
     {
-      "includes": ["packages/vite/src/main.ts"],
+      "includes": ["packages/vite/src/main.ts", "packages/nestbridge/src/vite.ts"],
       "linter": {
         "rules": {
           "style": {

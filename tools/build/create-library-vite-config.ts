@@ -55,3 +55,43 @@ export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
     },
   });
 };
+
+export interface MultiEntryLibraryViteConfigOptions {
+  root: string;
+  entries: Record<string, string>;
+}
+
+export const createMultiEntryLibraryViteConfig = (options: MultiEntryLibraryViteConfigOptions) => {
+  return defineConfig({
+    plugins: [
+      dts({
+        tsconfigPath: resolve(options.root, 'tsconfig.json'),
+        rollupTypes: true,
+        include: ['src'],
+      }),
+    ],
+    build: {
+      target: 'esnext',
+      sourcemap: true,
+      ssr: true,
+      outDir: 'build',
+      lib: {
+        entry: Object.fromEntries(
+          Object.entries(options.entries).map(([name, entryPath]) => [
+            name,
+            resolve(options.root, entryPath),
+          ]),
+        ),
+        formats: ['es'],
+        fileName: (_format, entryName) => `${entryName}.js`,
+      },
+      rollupOptions: {
+        external: [/^@nestbridge\//],
+      },
+    },
+    test: {
+      environment: 'node',
+      include: ['tests/**/*.test.ts'],
+    },
+  });
+};
