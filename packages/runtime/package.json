@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "main": "./dist/nestbridge.runtime.js",
-  "types": "./dist/index.d.ts",
+  "main": "./build/nestbridge.runtime.js",
+  "types": "./build/nestbridge.runtime.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/nestbridge.runtime.js"
+      "types": "./build/nestbridge.runtime.d.ts",
+      "import": "./build/nestbridge.runtime.js"
     }
   },
   "files": [
-    "dist"
+    "build"
   ],
   "scripts": {
     "build": "vite build",

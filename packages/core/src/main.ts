@@ -1,4 +1,3 @@
-export { version as VERSION } from '../package.json';
 export { analyzeControllers } from './analysis';
 export { generateControllerDeclaration } from './declarations';
 export type { NestBridgeDiagnostic, NestBridgeDiagnosticCode } from './diagnostics';
@@ -10,3 +9,4 @@ export type {
   HttpMethod,
   ParameterSourceKind,
 } from './models';
+export { VERSION } from './version';

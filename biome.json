@@ -10,6 +10,7 @@
     "includes": [
       "**",
       "!**/dist",
+      "!packages/*/build",
       "!**/node_modules",
       "!**/.nx",
       "!**/.nestbridge",

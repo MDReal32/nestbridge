@@ -37,6 +37,7 @@ export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
       target: 'esnext',
       sourcemap: true,
       ssr: true,
+      outDir: 'build',
       lib: {
         entry: resolve(options.root, options.entry ?? 'src/main.ts'),
         formats: ['es'],

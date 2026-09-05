@@ -1,5 +1,6 @@
 node_modules/
 dist/
+packages/*/build/
 .nx/cache/
 .nx/workspace-data/
 .nestbridge/
