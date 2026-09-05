@@ -1,5 +1,15 @@
 # @nestbridge/runtime
 
+## 1.1.0
+
+### Minor Changes
+
+- 7336719: Add support for controller methods that return `Observable<T>` or `StreamableFile`. The analyzer now detects these return types (`ResponseKind`), the generated client requests a blob for streamed responses, and `@nestbridge/runtime` exposes `RemoteObservableResult`/`RemoteStreamResult` helper types alongside the existing `RemoteResult`.
+
+### Patch Changes
+
+- 7336719: Fix `NestBridgeGraphqlError` dumping the raw `{ response, request }` object (headers, query text, variables and all) into its `message`. The message is now a short, readable line — the GraphQL errors' text when present, otherwise the raw response body, otherwise just the endpoint and status.
+
 ## 1.0.1
 
 ### Patch Changes

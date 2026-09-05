@@ -1,5 +1,19 @@
 # @nestbridge/vite
 
+## 1.1.0
+
+### Minor Changes
+
+- 7336719: Add support for controller methods that return `Observable<T>` or `StreamableFile`. The analyzer now detects these return types (`ResponseKind`), the generated client requests a blob for streamed responses, and `@nestbridge/runtime` exposes `RemoteObservableResult`/`RemoteStreamResult` helper types alongside the existing `RemoteResult`.
+
+### Patch Changes
+
+- 7336719: Fix generated resolver client methods returning the raw GraphQL `data` envelope (e.g. `{ createBook: { id, title } }`) instead of the requested field's value (`{ id, title }`), so calling a generated resolver method behaves like calling the real one.
+- Updated dependencies [7336719]
+- Updated dependencies [7336719]
+  - @nestbridge/core@1.1.0
+  - @nestbridge/runtime@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes
