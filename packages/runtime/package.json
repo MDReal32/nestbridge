@@ -3,6 +3,11 @@
   "version": "0.1.1",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MDReal32/nestbridge.git",
+    "directory": "packages/runtime"
+  },
   "main": "./build/nestbridge.runtime.js",
   "types": "./build/nestbridge.runtime.d.ts",
   "exports": {
