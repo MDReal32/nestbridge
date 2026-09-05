@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  version-or-publish:
+    name: Version packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      has-changesets: ${{ steps.status.outputs.has-changesets }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check for pending changesets
+        id: status
+        run: |
+          if find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | grep -q .; then
+            echo "has-changesets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-changesets=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create/update Version Packages PR
+        if: steps.status.outputs.has-changesets == 'true'
+        uses: changesets/action@v1
+        with:
+          version: yarn version
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to npm
+    needs: version-or-publish
+    if: needs.version-or-publish.outputs.has-changesets == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Lint
+        run: yarn nx run-many -t lint
+
+      - name: Typecheck
+        run: yarn nx run-many -t typecheck
+
+      - name: Test
+        run: yarn nx run-many -t test
+
+      # Builds every publishable package plus everything it depends on
+      # (core, runtime, vite, nestbridge), in Nx's own dependency order.
+      - name: Build publishable packages
+        run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
+
+      - name: Verify build artifacts
+        run: |
+          set -euo pipefail
+          declare -A expected=(
+            [packages/core]="build/nestbridge.core.js build/nestbridge.core.d.ts"
+            [packages/runtime]="build/nestbridge.runtime.js build/nestbridge.runtime.d.ts"
+            [packages/vite]="build/nestbridge.vite.js build/nestbridge.vite.d.ts"
+            [packages/nestbridge]="build/index.js build/index.d.ts build/vite.js build/vite.d.ts"
+          )
+          for dir in "${!expected[@]}"; do
+            for file in ${expected[$dir]}; do
+              if [ ! -f "$dir/$file" ]; then
+                echo "::error::Missing expected build artifact: $dir/$file"
+                exit 1
+              fi
+            done
+            echo "Verified artifacts in $dir"
+          done
+
+      # Published strictly in dependency order: core and runtime have no
+      # interdependency, vite depends on both, and the nestbridge umbrella
+      # depends on runtime and vite, so it must publish last.
+      #
+      # Auth is npm OIDC Trusted Publishing (id-token: write above) — no
+      # NPM_TOKEN/YARN_NPM_AUTH_TOKEN secret exists anywhere in this repo.
+      # Plain `npm publish` is used deliberately instead of `yarn npm
+      # publish`: Yarn Berry's own OIDC support still has open bugs
+      # (publish fails with "No authentication configured for request"
+      # even with a correctly configured Trusted Publisher), while npm's
+      # CLI OIDC handshake is well supported. Each package is checked
+      # against the registry first so re-running this job (e.g. after an
+      # unrelated push once nothing is pending) is a safe no-op.
+      - name: Publish packages to npm
+        run: |
+          set -euo pipefail
+          for dir in packages/core packages/runtime packages/vite packages/nestbridge; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published, skipping"
+              continue
+            fi
+            echo "Publishing $name@$version"
+            (cd "$dir" && npm publish --access public --provenance)
+            git tag "$name@$version"
+            git push origin "$name@$version"
+            GH_TOKEN=${{ github.token }} gh release create "$name@$version" --title "$name@$version" --generate-notes
+          done

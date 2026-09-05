@@ -12,10 +12,13 @@
     "lint": "nx run-many -t lint",
     "typecheck": "nx run-many -t typecheck",
     "format": "biome format --write .",
-    "graph": "nx graph"
+    "graph": "nx graph",
+    "changeset": "changeset",
+    "version": "changeset version"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
+    "@changesets/cli": "^3.0.2",
     "nx": "^23.2.0"
   }
 }
