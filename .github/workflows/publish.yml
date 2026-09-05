@@ -1,0 +1,117 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  validate:
+    name: Validate (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Lint
+        run: yarn nx run-many -t lint
+
+      - name: Typecheck
+        run: yarn nx run-many -t typecheck
+
+      - name: Test
+        run: yarn nx run-many -t test
+
+      - name: Build
+        run: yarn nx run-many -t build
+
+  publish:
+    name: Publish to npm
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Builds every publishable package plus everything it depends on
+      # (core, runtime, vite, nestbridge), in Nx's own dependency order.
+      - name: Build publishable packages
+        run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
+
+      - name: Verify build artifacts
+        run: |
+          set -euo pipefail
+          declare -A expected=(
+            [packages/core]="build/nestbridge.core.js build/nestbridge.core.d.ts"
+            [packages/runtime]="build/nestbridge.runtime.js build/nestbridge.runtime.d.ts"
+            [packages/vite]="build/nestbridge.vite.js build/nestbridge.vite.d.ts"
+            [packages/nestbridge]="build/index.js build/index.d.ts build/vite.js build/vite.d.ts"
+          )
+          for dir in "${!expected[@]}"; do
+            for file in ${expected[$dir]}; do
+              if [ ! -f "$dir/$file" ]; then
+                echo "::error::Missing expected build artifact: $dir/$file"
+                exit 1
+              fi
+            done
+            echo "Verified artifacts in $dir"
+            (cd "$dir" && yarn pack --dry-run)
+          done
+
+      # Published strictly in dependency order: core and runtime have no
+      # interdependency, vite depends on both, and the nestbridge umbrella
+      # depends on runtime and vite, so it must publish last.
+      #
+      # --tolerate-republish makes Yarn warn and exit cleanly if this exact
+      # version is already on the registry, instead of failing the release;
+      # any other publish failure (auth, network, integrity) still fails
+      # the step normally.
+      - name: Publish @nestbridge/core
+        working-directory: packages/core
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn npm publish --access public --provenance --tolerate-republish
+
+      - name: Publish @nestbridge/runtime
+        working-directory: packages/runtime
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn npm publish --access public --provenance --tolerate-republish
+
+      - name: Publish @nestbridge/vite
+        working-directory: packages/vite
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn npm publish --access public --provenance --tolerate-republish
+
+      - name: Publish nestbridge
+        working-directory: packages/nestbridge
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn npm publish --provenance --tolerate-republish
