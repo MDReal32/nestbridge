@@ -10,6 +10,15 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome check ."
   },
+  "nx": {
+    "targets": {
+      "typecheck": {
+        "dependsOn": [
+          "build"
+        ]
+      }
+    }
+  },
   "dependencies": {
     "@nestbridge/runtime": "workspace:*"
   },

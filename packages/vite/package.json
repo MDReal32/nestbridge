@@ -20,6 +20,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check ."
   },
+  "nx": {
+    "name": "vite",
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/build"
+        ]
+      }
+    }
+  },
   "dependencies": {
     "@nestbridge/core": "workspace:*",
     "@nestbridge/runtime": "workspace:*"

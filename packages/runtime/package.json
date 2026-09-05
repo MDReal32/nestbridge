@@ -20,6 +20,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check ."
   },
+  "nx": {
+    "name": "runtime",
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/build"
+        ]
+      }
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
