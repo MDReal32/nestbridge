@@ -1,0 +1,8 @@
+{
+  "name": "runtime",
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/build"]
+    }
+  }
+}

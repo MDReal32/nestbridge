@@ -1,0 +1,8 @@
+{
+  "name": "vite",
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/build"]
+    }
+  }
+}

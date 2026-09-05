@@ -1,0 +1,8 @@
+{
+  "name": "core",
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/build"]
+    }
+  }
+}
