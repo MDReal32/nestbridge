@@ -3,13 +3,15 @@
 [![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/nestbridge.svg)](https://www.npmjs.com/package/nestbridge)
 
-NestBridge is a typed client bridge for NestJS controllers.
+NestBridge is a typed client bridge for NestJS controllers and GraphQL
+resolvers.
 
-It lets frontend code import a NestJS controller directly, keep full TypeScript
-autocomplete and type checking against the controller's real method
-signatures, and get `fetch()` calls at runtime instead of the actual
-controller implementation. NestJS, your services, your database code, and the
-controller's own implementation never reach the browser.
+It lets frontend code import a NestJS controller or resolver directly, keep
+full TypeScript autocomplete and type checking against its real method
+signatures, and get a `fetch()`-based REST call or GraphQL request at runtime
+instead of the actual implementation. NestJS, your services, your database
+code, and the controller's or resolver's own implementation never reach the
+browser.
 
 ```ts
 import { UsersController } from '@server/users/users.controller';
@@ -69,6 +71,7 @@ runtime/plugin surface.
 - [Setting up Vite](#setting-up-vite)
 - [Setting up the runtime](#setting-up-the-runtime)
 - [A NestJS controller, unmodified](#a-nestjs-controller-unmodified)
+- [A GraphQL resolver, unmodified](#a-graphql-resolver-unmodified)
 - [The frontend](#the-frontend)
 - [Supported decorators](#supported-decorators)
 - [Types are projected, not regenerated](#types-are-projected-not-regenerated)
@@ -121,27 +124,33 @@ fetch()
 NestJS HTTP endpoint
 ```
 
-1. **`@nestbridge/core`** statically analyzes controller source files using
-   the TypeScript Compiler API — no NestJS runtime, no reflection, no
-   executing your code. It extracts each controller's path, its HTTP methods,
-   and each method's `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping
-   into a plain `ControllerDefinition` model. Argument types and return types
-   are never re-derived from the AST — the generated declaration projects
-   them straight from the real controller's own TypeScript type via a
-   type-only reference, so it always matches what `tsc` already knows.
-2. **`@nestbridge/vite`** is a Vite plugin. It globs your controller files,
-   runs them through `@nestbridge/core`, and does two independent things with
-   the result:
+1. **`@nestbridge/core`** statically analyzes controller and resolver source
+   files using the TypeScript Compiler API — no NestJS runtime, no
+   reflection, no executing your code. For controllers, it extracts each
+   one's path, its HTTP methods, and each method's
+   `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping into a plain
+   `ControllerDefinition`. For resolvers, it extracts each `@Query`/`@Mutation`
+   method's operation kind and name, its `@Args()` parameters, and a
+   selection set built from the return type's `@ObjectType()` fields, into a
+   plain `ResolverDefinition`. Argument types and return types are never
+   re-derived from the AST for code generation purposes — the generated
+   declaration projects them straight from the real controller's or
+   resolver's own TypeScript type via a type-only reference, so it always
+   matches what `tsc` already knows.
+2. **`@nestbridge/vite`** is a Vite plugin. It globs your controller and
+   resolver files, runs them through `@nestbridge/core`, and does two
+   independent things with the result:
    - it writes the generated declarations to disk so TypeScript (your editor,
-     `tsc`) sees a client-facing shape instead of the real controller when you
-     import it through the configured alias;
+     `tsc`) sees a client-facing shape instead of the real controller or
+     resolver when you import it through the configured alias;
    - it intercepts the *bundler's* resolution of that same import and serves
      a generated Vite virtual module that calls `@nestbridge/runtime`
-     instead of the real file. The real controller source is never read by
-     the bundler and never enters the browser's module graph.
-3. **`@nestbridge/runtime`** is a tiny, zero-dependency `fetch()` wrapper that
-   the generated virtual modules call into. It has no knowledge of NestJS at
-   all.
+     instead of the real file. The real source is never read by the bundler
+     and never enters the browser's module graph.
+3. **`@nestbridge/runtime`** is the client the generated virtual modules call
+   into: a `fetch()` wrapper for controllers, and a
+   [`graphql-request`](https://github.com/jasonkuhrt/graphql-request)-based
+   client for resolvers. It has no knowledge of NestJS at all.
 
 Because the bundler-side interception and the TypeScript-side declaration are
 two independent mechanisms, the browser genuinely never sees your controller,
@@ -203,14 +212,16 @@ export default defineConfig({
   plugins: [
     nestBridge({
       controllers: '../server/src/**/*.controller.ts',
+      resolvers: '../server/src/**/*.resolver.ts',
       baseURL: '/api',
     }),
   ],
 });
 ```
 
-The `resolve.alias` entry is what lets the bundler find the real controller
-files (so the plugin can intercept them). A matching `paths` entry in
+`resolvers` is optional — omit it if your app has no GraphQL resolvers. The
+`resolve.alias` entry is what lets the bundler find the real controller and
+resolver files (so the plugin can intercept them). A matching `paths` entry in
 `tsconfig.json` is what lets TypeScript find the *generated* declarations
 instead:
 
@@ -238,6 +249,7 @@ build and on every dev-server start.
 ```ts
 interface NestBridgeOptions {
   controllers: string | string[]; // glob(s), resolved relative to the Vite root
+  resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
   baseURL?: string;                // informational; call configureNestBridge for the runtime effect
   debug?: boolean;                 // logs discovery/analysis/HMR activity
   outputDir?: string;               // defaults to ".nestbridge"
@@ -268,18 +280,32 @@ everything you need rather than multiple times with partial options.
 ```ts
 interface NestBridgeConfig {
   baseURL?: string;
+  graphqlEndpoint?: string; // defaults to `${baseURL}/graphql`
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   fetch?: typeof globalThis.fetch;
 }
 ```
 
-Non-2xx responses reject with a `NestBridgeError`:
+Non-2xx REST responses reject with a `NestBridgeError`:
 
 ```ts
 class NestBridgeError<T = unknown> extends Error {
   readonly status: number;
   readonly body: T;
   readonly response: Response;
+}
+```
+
+Generated resolver methods call `graphqlRequest()` instead, which sends a
+request through [`graphql-request`](https://github.com/jasonkuhrt/graphql-request)
+to `graphqlEndpoint` and rejects failed requests with a `NestBridgeGraphqlError`:
+
+```ts
+class NestBridgeGraphqlError extends Error {
+  readonly status: number;
+  readonly errors: GraphQLError[] | undefined;
+  readonly data: Record<string, unknown> | undefined;
+  readonly request: unknown;
 }
 ```
 
@@ -308,20 +334,52 @@ export class UsersController {
 Nothing about this controller is NestBridge-specific — no base class, no
 decorator, no special syntax. It's a normal NestJS controller.
 
+## A GraphQL resolver, unmodified
+
+```ts
+@Resolver(() => UserType)
+export class UsersResolver {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Query(() => UserType)
+  findOne(@Args('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
+  @Mutation(() => UserType, { name: 'createUser' })
+  create(@Args('name') name: string) {
+    return this.usersService.create({ name });
+  }
+}
+```
+
+Nothing about this resolver is NestBridge-specific either. Notice that
+neither method has a TypeScript return-type annotation — NestBridge builds
+the client's selection set from the `@Query()`/`@Mutation()` type thunk
+(`() => UserType`) directly, exactly as `@nestjs/graphql` itself already
+requires that thunk at runtime to build the schema. There's no redundant
+second annotation to keep in sync, matching the DX of REST controllers above.
+
 ## The frontend
 
 ```ts
 import { UsersController } from '@server/users/users.controller';
+import { UsersResolver } from '@server/users/users.resolver';
 
 const users = new UsersController();
+const usersResolver = new UsersResolver();
 
 const user = await users.findOne('123');
 console.log(user.name);
+
+const queried = await usersResolver.findOne('123');
+console.log(queried.name);
 ```
 
 `users.findOne` requires a `string`, and `user` is typed as `UserDto` —
 exactly as declared in the controller — even though at runtime `users` is a
-plain object that calls `fetch()`.
+plain object that calls `fetch()`. `usersResolver.findOne` works the same
+way, except at runtime it sends a GraphQL request instead.
 
 See [`examples/basic`](../../examples/basic) for a complete, runnable version
 of this (NestJS server + Vite client), including a
@@ -343,9 +401,18 @@ the architecture promises.
 | `@Body()` | Whole body | Passed through as `body` |
 | `@Headers('name')` | Named header | Merged into the `headers` object |
 
-Route paths and decorator arguments must be static string literals
-(`@Get(':id')`, not `@Get(createRoute())`) — NestBridge only analyzes source
-text, it never executes your code.
+GraphQL resolvers:
+
+| Decorator | Server meaning | Client behavior |
+| --- | --- | --- |
+| `@Resolver(() => Type)` | Base object type | Used to resolve nested `@ObjectType()` fields |
+| `@Query(name?)` / `@Query(() => Type)` | Query operation, name, return type | `graphqlRequest({ document, variables })` with a `query` document |
+| `@Mutation(() => Type, { name? })` | Mutation operation, name, return type | Same, with a `mutation` document |
+| `@Args('name')` | Named GraphQL variable | Declared as `$name: <GraphQLType>` and passed as a request variable |
+
+Route paths, operation names, and decorator arguments must all be static
+string literals (`@Get(':id')`, not `@Get(createRoute())`) — NestBridge only
+analyzes source text, it never executes your code.
 
 ## Types are projected, not regenerated
 
@@ -401,7 +468,19 @@ __ServerUsersController } from '...'`) is erased at compile time — the real
 controller implementation, its NestJS decorators, and its dependencies never
 reach the client bundle.
 
+Resolvers get the exact same declaration, generated from the exact same
+`ResolverDefinition['name'] → sourceFile → methods` shape — so a resolver
+method's TypeScript type also never needs an explicit return-type annotation.
+What's different for resolvers is the *analysis* NestBridge runs to decide
+what to fetch: it reads the `@Query()`/`@Mutation()` type-thunk argument to
+resolve the return type, then walks that type's `@ObjectType()` fields to
+build the GraphQL selection set baked into the generated request document —
+falling back to a TS return-type annotation only for the legacy
+`@Query('name')` string-only form.
+
 ## Unsupported (by design, for this MVP)
+
+REST controllers:
 
 - `@Req()` / `@Res()`, Express/Fastify request or response objects
 - `StreamableFile`, Server-Sent Events, WebSockets
@@ -409,8 +488,17 @@ reach the client bundle.
 - custom parameter decorators
 - runtime-computed controller or route paths
 
+GraphQL resolvers:
+
+- `@Subscription()`
+- `@ResolveField()` / nested field resolvers
+- interface and union return types
+- destructured `@Args()` parameters, or `@Args()` parameters without an
+  explicit TypeScript type annotation
+- runtime-computed operation names
+
 Each of these produces a diagnostic rather than a silent miscompile. `debug:
-true` in `NestBridgeOptions` additionally logs controller discovery,
+true` in `NestBridgeOptions` additionally logs controller/resolver discovery,
 analysis, and HMR activity.
 
 ## DTOs
@@ -450,13 +538,13 @@ normal HMR machinery picks up the change — no dev-server restart required.
 ```text
 nestbridge/
   packages/
-    core/      @nestbridge/core     — static analysis + declaration generation
-    runtime/   @nestbridge/runtime  — browser fetch() client, zero dependencies
+    core/      @nestbridge/core     — static analysis (controllers + resolvers) + declaration generation
+    runtime/   @nestbridge/runtime  — browser client: fetch() for REST, graphql-request for GraphQL
     vite/      @nestbridge/vite     — Vite plugin: discovery, virtual modules, HMR
   examples/
     basic/
-      server/  a minimal NestJS app
-      client/  a minimal Vite app importing the server's controller directly
+      server/  a minimal NestJS app, with both a REST controller and a GraphQL resolver
+      client/  a minimal Vite app importing the server's controller and resolver directly
 ```
 
 Dependency graph:
@@ -530,10 +618,11 @@ yarn nx run basic-client:dev     # run the example Vite dev server
 
 This is an intentionally small MVP:
 
-- One HTTP adapter (REST via `fetch`). The internal structure separates
-  `@nestbridge/runtime`'s `http-adapter/` from its `config/` specifically so
-  an alternative adapter (e.g. GraphQL) could be added later without
-  reshaping the public `request()` contract.
+- Two adapters: REST via `fetch` (`@nestbridge/runtime`'s `http-adapter/`)
+  and GraphQL via `graphql-request` (`http-adapter/`'s sibling
+  `graphql-adapter/`) — kept as separate modules behind `config/` so either
+  can evolve independently of `request()`/`graphqlRequest()`'s public
+  contract.
 - No request/response interceptors beyond global + per-request headers and a
   custom `fetch` implementation.
 - No automatic runtime wiring between `NestBridgeOptions.baseURL` (the Vite

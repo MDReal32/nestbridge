@@ -3,8 +3,9 @@
 [![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@nestbridge/core.svg)](https://www.npmjs.com/package/@nestbridge/core)
 
-Static analysis of NestJS controllers, and generation of the client-facing
-`.d.ts` declarations that make them safely importable from the browser.
+Static analysis of NestJS controllers and GraphQL resolvers, and generation
+of the client-facing `.d.ts` declarations that make them safely importable
+from the browser.
 
 This package has no runtime dependency on NestJS, Vite, or the DOM — it reads
 TypeScript source text via the TypeScript Compiler API and never executes
@@ -37,13 +38,35 @@ const { controllers, diagnostics } = analyzeControllers([
 ]);
 ```
 
-### `generateControllerDeclaration(controller, outputFilePath)`
+### `analyzeResolvers(filePaths)`
 
-Turns a `ControllerDefinition` into the text of a `.d.ts` file. The generated
-class re-declares each method using a type-only reference back to the real
-controller (`Parameters<__ServerX['method']>` / `RemoteResult<...>`), so
-argument and return types are projected from the real controller's own type —
-never re-derived from the AST.
+Parses each file, finds classes decorated with `@Resolver(...)`, and
+extracts a plain `ResolverDefinition` per resolver — its name, and each
+`@Query`/`@Mutation` method's operation kind (`'query'` | `'mutation'`),
+operation name, `@Args()` parameter mapping (name, GraphQL type), and a
+`selection` of `SelectionField`s built by walking the return type's
+`@ObjectType()` fields. The return type itself is read from the
+`@Query()`/`@Mutation()` type-thunk argument (`() => UserType`) first,
+falling back to a TypeScript return-type annotation only when no thunk is
+present — a resolver method never needs both.
+
+```ts
+import { analyzeResolvers } from '@nestbridge/core';
+
+const { resolvers, diagnostics } = analyzeResolvers([
+  'src/users/users.resolver.ts',
+]);
+```
+
+### `generateControllerDeclaration(definition, outputFilePath)`
+
+Turns a `ControllerDefinition` or a `ResolverDefinition` into the text of a
+`.d.ts` file — both share the same `{ name, sourceFile, methods }` shape, so
+the same generator is used for both. The generated class re-declares each
+method using a type-only reference back to the real controller or resolver
+(`Parameters<__ServerX['method']>` / `RemoteResult<...>`), so argument and
+return types are projected from the real class's own type — never re-derived
+from the AST.
 
 ```ts
 import { generateControllerDeclaration } from '@nestbridge/core';
@@ -65,6 +88,8 @@ more diagnostics as a thrown `Error`.
 
 `ControllerDefinition`, `ControllerMethodDefinition`,
 `ControllerParameterDefinition`, `HttpMethod`, `ParameterSourceKind`,
+`ResolverDefinition`, `ResolverMethodDefinition`,
+`ResolverArgumentDefinition`, `SelectionField`, `GraphqlOperationKind`,
 `NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`.
 
 ## License

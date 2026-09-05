@@ -1,5 +1,11 @@
 # @nestbridge/runtime
 
+## 1.0.1
+
+### Patch Changes
+
+- Refresh package READMEs to document GraphQL resolver support.
+
 ## 1.0.0
 
 ### Major Changes

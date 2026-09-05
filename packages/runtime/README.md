@@ -3,10 +3,12 @@
 [![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@nestbridge/runtime.svg)](https://www.npmjs.com/package/@nestbridge/runtime)
 
-The browser-side `fetch()` client that NestBridge's generated controller
-modules call into. Zero dependencies, and no knowledge of NestJS or Vite —
-see the [repository README](../../README.md) for how this fits into the rest
-of NestBridge.
+The browser-side client that NestBridge's generated controller and resolver
+modules call into: a dependency-free `fetch()` wrapper for REST, and a
+[`graphql-request`](https://github.com/jasonkuhrt/graphql-request)-based
+client for GraphQL. No knowledge of NestJS or Vite either way — see the
+[repository README](../../README.md) for how this fits into the rest of
+NestBridge.
 
 ## Install
 
@@ -34,6 +36,7 @@ than merging, so pass everything you need in one call.
 ```ts
 interface NestBridgeConfig {
   baseURL?: string;
+  graphqlEndpoint?: string; // defaults to `${baseURL}/graphql`
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   fetch?: typeof globalThis.fetch;
 }
@@ -52,14 +55,32 @@ class NestBridgeError<T = unknown> extends Error {
 }
 ```
 
+## `graphqlRequest()`
+
+Generated resolver modules call `graphqlRequest()` directly; you won't
+normally call it yourself either. It sends the given document/variables to
+`graphqlEndpoint` via `graphql-request`'s `GraphQLClient`. Failed requests
+reject with a `NestBridgeGraphqlError`:
+
+```ts
+class NestBridgeGraphqlError extends Error {
+  readonly status: number;
+  readonly errors: GraphQLError[] | undefined;
+  readonly data: Record<string, unknown> | undefined;
+  readonly request: unknown;
+}
+```
+
 ## Types
 
 - `NestBridgeConfig` — the shape passed to `configureNestBridge`.
-- `NestBridgeRequest` — the shape of a single generated request.
+- `NestBridgeRequest` — the shape of a single generated REST request.
+- `NestBridgeGraphqlRequest` — the shape of a single generated GraphQL
+  request (`document` + optional `variables`).
 - `RemoteMethod<T>` / `RemoteResult<T>` — the type-level helpers that project
-  a real controller method's parameters and return type onto its generated
-  client method. Useful outside code generation too — a manual SDK wrapper, a
-  mock, a test double.
+  a real controller or resolver method's parameters and return type onto its
+  generated client method. Useful outside code generation too — a manual SDK
+  wrapper, a mock, a test double.
 
 ## License
 
