@@ -1,0 +1,13 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": [],
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@server/*": ["./.nestbridge/server/src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "typecheck-fixtures"]
+}
