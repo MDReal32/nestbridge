@@ -294,13 +294,23 @@ text, it never executes your code.
 
 NestBridge never prints or reconstructs a method's argument or return type.
 The generated declaration carries a type-only import of the real controller
-class and projects each exposed method through `RemoteMethod<T>`:
+class and projects each exposed method as a plain method signature, built
+from TypeScript's own `Parameters<T>` plus a `RemoteResult<T>` helper:
 
 ```ts
-type RemoteMethod<T> = T extends (...args: infer Args) => infer Result
-  ? (...args: Args) => Promise<Awaited<Result>>
+type RemoteResult<T> = T extends (...args: never[]) => infer Result
+  ? Promise<Awaited<Result>>
   : never;
 ```
+
+```ts
+// generated
+findOne(...args: Parameters<ServerUsersController['findOne']>): RemoteResult<ServerUsersController['findOne']>;
+```
+
+Declaring it as a method (rather than a property typed as a function) keeps
+IDE hovers and quick-documentation showing a normal method signature instead
+of a function-typed property.
 
 Because this is a real TypeScript type operation — not a reprint — it works
 whether or not the method has an explicit return type annotation:

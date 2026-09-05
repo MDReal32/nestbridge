@@ -38,25 +38,29 @@ describe('generateControllerDeclaration', () => {
     expect(declaration).not.toContain('helperNotAnEndpoint');
   });
 
-  it('projects each exposed method through RemoteMethod against the real controller type', () => {
+  it('projects each exposed method as a method signature against the real controller type', () => {
     const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/widgets.controller.d.ts'),
     );
 
-    expect(declaration).toContain("findOne: RemoteMethod<__ServerWidgetsController['findOne']>;");
-    expect(declaration).toContain("create: RemoteMethod<__ServerWidgetsController['create']>;");
+    expect(declaration).toContain(
+      "findOne(...args: Parameters<__ServerWidgetsController['findOne']>): RemoteResult<__ServerWidgetsController['findOne']>;",
+    );
+    expect(declaration).toContain(
+      "create(...args: Parameters<__ServerWidgetsController['create']>): RemoteResult<__ServerWidgetsController['create']>;",
+    );
   });
 
-  it('imports RemoteMethod from @nestbridge/runtime', () => {
+  it('imports RemoteResult from @nestbridge/runtime', () => {
     const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/widgets.controller.d.ts'),
     );
 
-    expect(declaration).toContain("import type { RemoteMethod } from '@nestbridge/runtime';");
+    expect(declaration).toContain("import type { RemoteResult } from '@nestbridge/runtime';");
   });
 
   it('imports the real controller type relative to the declaration output path', () => {
@@ -85,7 +89,7 @@ describe('generateControllerDeclaration', () => {
     );
 
     expect(declaration).toContain(
-      "findOne: RemoteMethod<__ServerInferredReturnTypeController['findOne']>;",
+      "findOne(...args: Parameters<__ServerInferredReturnTypeController['findOne']>): RemoteResult<__ServerInferredReturnTypeController['findOne']>;",
     );
   });
 });
