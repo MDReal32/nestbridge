@@ -1,5 +1,6 @@
 import { getNestBridgeConfig } from '../config';
 import { buildRequestUrl } from './build-request-url';
+import { extractErrorMessage } from './extract-error-message';
 import { NestBridgeError } from './nestbridge-error';
 import type { NestBridgeRequest } from './nestbridge-request';
 import { parseResponseBody } from './parse-response-body';
@@ -21,12 +22,12 @@ export const request = async <T>(nestBridgeRequest: NestBridgeRequest) => {
   const responseBody = await parseResponseBody(response);
 
   if (!response.ok) {
-    throw new NestBridgeError(
-      `NestBridge request to ${url} failed with status ${response.status}.`,
-      response.status,
-      responseBody,
-      response,
-    );
+    const backendMessage = extractErrorMessage(responseBody);
+    const message = `NestBridge request to ${url} failed with status ${response.status}.${
+      backendMessage === undefined ? '' : ` ${backendMessage}`
+    }`;
+
+    throw new NestBridgeError(message, response.status, responseBody, response);
   }
 
   return responseBody as T;

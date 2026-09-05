@@ -101,6 +101,21 @@ describe('request', () => {
     expect((error as NestBridgeError).body).toEqual({ message: 'Not Found' });
   });
 
+  it('includes the backend message in the error message', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ statusCode: 404, message: 'User not found' }, { status: 404 }),
+      );
+    configureNestBridge({ fetch: fetchMock });
+
+    const error = await request({ method: 'GET', path: '/users/missing' }).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect((error as NestBridgeError).message).toContain('User not found');
+  });
+
   it('uses a custom fetch implementation when configured', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
     configureNestBridge({ fetch: fetchMock });
