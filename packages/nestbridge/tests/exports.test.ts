@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { configureNestBridge, NestBridgeError, request } from '../src/index';
+import {
+  configureNestBridge,
+  graphqlRequest,
+  NestBridgeError,
+  NestBridgeGraphqlError,
+  request,
+} from '../src/index';
 import nestBridge from '../src/vite';
 
 describe('nestbridge root facade', () => {
@@ -7,6 +13,11 @@ describe('nestbridge root facade', () => {
     expect(configureNestBridge).toBeTypeOf('function');
     expect(request).toBeTypeOf('function');
     expect(NestBridgeError).toBeTypeOf('function');
+  });
+
+  it('re-exports the runtime GraphQL API', () => {
+    expect(graphqlRequest).toBeTypeOf('function');
+    expect(NestBridgeGraphqlError).toBeTypeOf('function');
   });
 });
 

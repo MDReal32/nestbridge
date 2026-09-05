@@ -1,16 +1,21 @@
 import { formatDiagnostic, type NestBridgeDiagnostic } from '@nestbridge/core';
 import { normalizePath, type Plugin, type ResolvedConfig } from 'vite';
-import { generateControllerModule } from '../codegen';
-import { writeControllerDeclarations } from '../declarations';
-import { discoverControllerFiles } from '../discovery';
+import { generateControllerModule, generateResolverModule } from '../codegen';
+import { writeControllerDeclarations, writeResolverDeclarations } from '../declarations';
+import { discoverFiles } from '../discovery';
 import { type NestBridgeOptions, resolveNestBridgeOptions } from '../options';
 import {
   decodeControllerVirtualId,
+  decodeResolverVirtualId,
   encodeControllerVirtualId,
+  encodeResolverVirtualId,
   isResolvedControllerVirtualId,
+  isResolvedResolverVirtualId,
   resolvedControllerVirtualId,
+  resolvedResolverVirtualId,
 } from '../virtual-modules';
 import { createControllerRegistry } from './controller-registry';
+import { createResolverRegistry } from './resolver-registry';
 
 interface DiagnosticReporter {
   error: (message: string) => never;
@@ -21,7 +26,8 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
   const resolvedOptions = resolveNestBridgeOptions(options);
 
   let viteConfig: ResolvedConfig;
-  let registry: ReturnType<typeof createControllerRegistry>;
+  let controllerRegistry: ReturnType<typeof createControllerRegistry>;
+  let resolverRegistry: ReturnType<typeof createResolverRegistry>;
 
   const log = (message: string) => {
     if (resolvedOptions.debug) {
@@ -52,11 +58,16 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
   };
 
   const runAnalysis = (reporter: DiagnosticReporter) => {
-    const { controllers, diagnostics } = registry.refresh();
-    reportDiagnostics(diagnostics, reporter);
+    const { controllers, diagnostics: controllerDiagnostics } = controllerRegistry.refresh();
+    const { resolvers, diagnostics: resolverDiagnostics } = resolverRegistry.refresh();
+
+    reportDiagnostics([...controllerDiagnostics, ...resolverDiagnostics], reporter);
     writeControllerDeclarations(controllers, viteConfig.root, resolvedOptions.outputDir);
-    log(`analyzed ${controllers.length} controller(s), ${diagnostics.length} diagnostic(s)`);
-    return controllers;
+    writeResolverDeclarations(resolvers, viteConfig.root, resolvedOptions.outputDir);
+    log(
+      `analyzed ${controllers.length} controller(s), ${resolvers.length} resolver(s), ` +
+        `${controllerDiagnostics.length + resolverDiagnostics.length} diagnostic(s)`,
+    );
   };
 
   return {
@@ -65,7 +76,8 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
 
     configResolved(config) {
       viteConfig = config;
-      registry = createControllerRegistry(resolvedOptions.controllers, config.root);
+      controllerRegistry = createControllerRegistry(resolvedOptions.controllers, config.root);
+      resolverRegistry = createResolverRegistry(resolvedOptions.resolvers, config.root);
     },
 
     buildStart() {
@@ -85,39 +97,49 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
 
       const absolutePath = normalizePath(resolved.id);
 
-      if (!registry.has(absolutePath)) {
-        return null;
+      if (controllerRegistry.has(absolutePath)) {
+        return resolvedControllerVirtualId(encodeControllerVirtualId(absolutePath));
       }
 
-      return resolvedControllerVirtualId(encodeControllerVirtualId(absolutePath));
+      if (resolverRegistry.has(absolutePath)) {
+        return resolvedResolverVirtualId(encodeResolverVirtualId(absolutePath));
+      }
+
+      return null;
     },
 
     load(id) {
-      if (!isResolvedControllerVirtualId(id)) {
-        return null;
+      if (isResolvedControllerVirtualId(id)) {
+        const controller = controllerRegistry.get(decodeControllerVirtualId(id));
+        return controller === undefined ? null : generateControllerModule(controller);
       }
 
-      const controller = registry.get(decodeControllerVirtualId(id));
+      if (isResolvedResolverVirtualId(id)) {
+        const resolver = resolverRegistry.get(decodeResolverVirtualId(id));
+        return resolver === undefined ? null : generateResolverModule(resolver);
+      }
 
-      return controller === undefined ? null : generateControllerModule(controller);
+      return null;
     },
 
     handleHotUpdate(ctx) {
       const normalizedFile = normalizePath(ctx.file);
-      const matchedBefore = registry.has(normalizedFile);
-      const matchesNow = discoverControllerFiles(
-        resolvedOptions.controllers,
-        viteConfig.root,
-      ).includes(normalizedFile);
+      const matchedBefore =
+        controllerRegistry.has(normalizedFile) || resolverRegistry.has(normalizedFile);
+      const matchesNow =
+        discoverFiles(resolvedOptions.controllers, viteConfig.root).includes(normalizedFile) ||
+        discoverFiles(resolvedOptions.resolvers, viteConfig.root).includes(normalizedFile);
 
       if (!matchedBefore && !matchesNow) {
         return undefined;
       }
 
       runAnalysis(devReporter);
-      log(`controller changed: ${normalizedFile}`);
+      log(`nestbridge source changed: ${normalizedFile}`);
 
-      const virtualId = resolvedControllerVirtualId(encodeControllerVirtualId(normalizedFile));
+      const virtualId = controllerRegistry.has(normalizedFile)
+        ? resolvedControllerVirtualId(encodeControllerVirtualId(normalizedFile))
+        : resolvedResolverVirtualId(encodeResolverVirtualId(normalizedFile));
       const moduleNode = ctx.server.moduleGraph.getModuleById(virtualId);
 
       return moduleNode === undefined ? undefined : [moduleNode, ...ctx.modules];

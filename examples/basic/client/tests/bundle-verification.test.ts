@@ -7,6 +7,8 @@ const FORBIDDEN_PATTERNS = [
   '@nestjs/common',
   '@nestjs/core',
   '@nestjs/platform-express',
+  '@nestjs/graphql',
+  '@nestjs/apollo',
   'reflect-metadata',
   'UsersService',
   'usersService',
@@ -36,5 +38,7 @@ describe('client bundle verification', () => {
     // generated fetch call shape instead of a literal symbol name.
     expect(bundleContents).toContain('/users/');
     expect(bundleContents).toContain('encodeURIComponent');
+    expect(bundleContents).toContain('query FindOne');
+    expect(bundleContents).toContain('mutation Create');
   });
 });

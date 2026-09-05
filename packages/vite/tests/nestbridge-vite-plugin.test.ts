@@ -24,7 +24,13 @@ const runBuild = async () => {
         external: ['@nestbridge/runtime'],
       },
     },
-    plugins: [nestBridge({ controllers: '../server/**/*.controller.ts', baseURL: '/api' })],
+    plugins: [
+      nestBridge({
+        controllers: '../server/**/*.controller.ts',
+        resolvers: '../server/**/*.resolver.ts',
+        baseURL: '/api',
+      }),
+    ],
   });
 
   const output = (Array.isArray(result) ? result[0] : result) as Rollup.RollupOutput;
@@ -66,6 +72,34 @@ describe('nestBridge vite plugin', () => {
     );
 
     expect(declaration).toContain('export declare class WidgetsController {');
+    expect(declaration).toContain('constructor();');
+    expect(declaration).not.toContain('UsersService');
+  });
+
+  it('intercepts the direct resolver import and replaces it with a generated module', async () => {
+    const code = await runBuild();
+
+    expect(code).toMatch(/from ['"]@nestbridge\/runtime['"]/);
+    expect(code).toContain('class UsersResolver');
+    expect(code).toContain('graphqlRequest');
+  });
+
+  it('excludes the real resolver implementation and NestJS dependencies from the bundle', async () => {
+    const code = await runBuild();
+
+    expect(code).not.toContain('usersService');
+    expect(code).not.toContain('@nestjs/graphql');
+  });
+
+  it('writes a client-facing resolver declaration file with a zero-argument constructor', async () => {
+    await runBuild();
+
+    const declaration = readFileSync(
+      resolve(clientRoot, '.nestbridge', 'server', 'user.resolver.d.ts'),
+      'utf-8',
+    );
+
+    expect(declaration).toContain('export declare class UsersResolver {');
     expect(declaration).toContain('constructor();');
     expect(declaration).not.toContain('UsersService');
   });

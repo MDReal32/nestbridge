@@ -1,7 +1,11 @@
 import ts from 'typescript';
 
 export const findDecorator = (
-  node: ts.ClassDeclaration | ts.MethodDeclaration | ts.ParameterDeclaration,
+  node:
+    | ts.ClassDeclaration
+    | ts.MethodDeclaration
+    | ts.ParameterDeclaration
+    | ts.PropertyDeclaration,
   decoratorName: string,
 ) => {
   const decorators = ts.getDecorators(node);
@@ -14,7 +18,11 @@ export const findDecorator = (
 };
 
 export const findAnyDecorator = (
-  node: ts.ClassDeclaration | ts.MethodDeclaration | ts.ParameterDeclaration,
+  node:
+    | ts.ClassDeclaration
+    | ts.MethodDeclaration
+    | ts.ParameterDeclaration
+    | ts.PropertyDeclaration,
   decoratorNames: readonly string[],
 ) => {
   const decorators = ts.getDecorators(node);

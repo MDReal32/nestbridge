@@ -1,1 +1,1 @@
-export { discoverControllerFiles } from './discover-controller-files';
+export { discoverFiles } from './discover-files';

@@ -4,7 +4,7 @@ import {
   type NestBridgeDiagnostic,
 } from '@nestbridge/core';
 import { normalizePath } from 'vite';
-import { discoverControllerFiles } from '../discovery';
+import { discoverFiles } from '../discovery';
 
 export interface ControllerRegistryRefreshResult {
   controllers: ControllerDefinition[];
@@ -27,7 +27,7 @@ export const createControllerRegistry = (
   const refresh = () => {
     controllersByFile.clear();
 
-    const files = discoverControllerFiles(patterns, root);
+    const files = discoverFiles(patterns, root);
     const { controllers, diagnostics } = analyzeControllers(files);
 
     for (const controller of controllers) {

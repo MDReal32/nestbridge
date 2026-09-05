@@ -1,4 +1,9 @@
-export type NestBridgeDiagnosticCode = 'unsupported-route' | 'unsupported-parameter';
+export type NestBridgeDiagnosticCode =
+  | 'unsupported-route'
+  | 'unsupported-parameter'
+  | 'unsupported-argument'
+  | 'unsupported-return-type'
+  | 'circular-type';
 
 export interface NestBridgeDiagnostic {
   code: NestBridgeDiagnosticCode;

@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { analyzeControllers } from '../src/analysis';
+import { analyzeControllers, analyzeResolvers } from '../src/analysis';
 import { formatDiagnostic } from '../src/diagnostics';
 
 const fixture = (name: string) => resolve(import.meta.dirname, 'fixtures', name);
@@ -49,5 +49,67 @@ describe('diagnostics', () => {
     expect(message).toContain('[NestBridge] Unsupported route.');
     expect(message).toContain('Found:\n@Get(createRoute())');
     expect(message).toContain(`${fixture('unsupported-route.controller.ts')}:`);
+  });
+
+  it('reports an unsupported-route diagnostic for a non-statically-analyzable operation name', () => {
+    const { resolvers, diagnostics } = analyzeResolvers([
+      fixture('unsupported-operation-name.resolver.ts'),
+    ]);
+
+    expect(resolvers).toHaveLength(1);
+    expect(resolvers[0]?.methods).toHaveLength(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'unsupported-route',
+      controllerName: 'UnsupportedOperationNameResolver',
+      memberName: 'ping',
+      found: '@Query(createName())',
+    });
+  });
+
+  it('reports an unsupported-argument diagnostic for a resolver parameter without @Args()', () => {
+    const { diagnostics } = analyzeResolvers([fixture('unsupported-argument.resolver.ts')]);
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'unsupported-argument',
+      controllerName: 'UnsupportedArgumentResolver',
+      memberName: 'echo',
+    });
+    expect(diagnostics[0]?.detail).toContain('@Args');
+  });
+
+  it('reports an unsupported-return-type diagnostic for a missing resolver return type annotation', () => {
+    const { diagnostics } = analyzeResolvers([fixture('missing-return-type.resolver.ts')]);
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'unsupported-return-type',
+      controllerName: 'MissingReturnTypeResolver',
+      memberName: 'echo',
+    });
+  });
+
+  it('reports an unsupported-return-type diagnostic for a field resolving to a non-@ObjectType() class', () => {
+    const { diagnostics } = analyzeResolvers([fixture('non-object-type.resolver.ts')]);
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'unsupported-return-type',
+      controllerName: 'NonObjectTypeResolver',
+      memberName: 'findOne',
+    });
+    expect(diagnostics[0]?.detail).toContain('@ObjectType()');
+  });
+
+  it('reports a circular-type diagnostic for object types that reference each other', () => {
+    const { diagnostics } = analyzeResolvers([fixture('circular.resolver.ts')]);
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'circular-type',
+      controllerName: 'CircularResolver',
+      memberName: 'root',
+    });
   });
 });

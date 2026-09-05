@@ -1,5 +1,10 @@
 import { dirname, extname, relative } from 'node:path';
-import type { ControllerDefinition } from '../models';
+
+interface ClientDeclarationSource {
+  name: string;
+  sourceFile: string;
+  methods: readonly { name: string }[];
+}
 
 const toPosixPath = (filePath: string) => filePath.replace(/\\/g, '/');
 
@@ -22,7 +27,7 @@ const stripExtension = (filePath: string) => {
 };
 
 export const generateControllerDeclaration = (
-  controller: ControllerDefinition,
+  controller: ClientDeclarationSource,
   outputFilePath: string,
 ) => {
   const sourceFileSpecifier = importSpecifierFor(controller.sourceFile, outputFilePath);

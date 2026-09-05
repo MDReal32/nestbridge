@@ -20,6 +20,7 @@ export default defineConfig({
   plugins: [
     nestBridge({
       controllers: '../server/src/**/*.controller.ts',
+      resolvers: '../server/src/**/*.resolver.ts',
       baseURL: '/api',
     }),
   ],
