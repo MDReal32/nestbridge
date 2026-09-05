@@ -13,7 +13,10 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
+  # Trusted publishing needs npm >= 11.5.1, which is only bundled by default
+  # on Node 24+ (Node 22's bundled npm is ~10.x and has no OIDC support at
+  # all — it fails fast with ENEEDAUTH instead of falling back to it).
+  NODE_VERSION: '24'
 
 jobs:
   version-or-publish:
@@ -105,14 +108,6 @@ jobs:
             done
             echo "Verified artifacts in $dir"
           done
-
-      # actions/setup-node's Node 22 build bundles npm ~10.x, which predates
-      # OIDC trusted-publishing support entirely (needs npm >= 11.5.1). An
-      # npm that old doesn't fall back to OIDC — it just tries the legacy
-      # token flow and fails fast with ENEEDAUTH, which is exactly what an
-      # unauthenticated run looked like before this step existed.
-      - name: Ensure npm supports trusted publishing
-        run: npm install -g npm@latest
 
       # Published strictly in dependency order: core and runtime have no
       # interdependency, vite depends on both, and the nestbridge umbrella
