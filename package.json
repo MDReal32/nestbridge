@@ -1,0 +1,21 @@
+{
+  "name": "@nestbridge/monorepo",
+  "private": true,
+  "packageManager": "yarn@4.18.0",
+  "workspaces": [
+    "packages/*",
+    "examples/*/*"
+  ],
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
+    "format": "biome format --write .",
+    "graph": "nx graph"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "nx": "^23.2.0"
+  }
+}

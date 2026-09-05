@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.nx/cache/
+.nx/workspace-data/
+.nestbridge/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+*.log
+.DS_Store
+coverage/
+.idea/
