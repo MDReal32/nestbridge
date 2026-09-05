@@ -22,6 +22,25 @@ reaches the browser. TypeScript still sees a declaration generated from the
 controller's real signatures, so autocomplete, parameter types, and return
 types all work as if you were calling the controller directly.
 
+## Contents
+
+- [Why NestBridge exists](#why-nestbridge-exists)
+- [How it works](#how-it-works)
+- [Why NestJS never reaches the browser](#why-nestjs-never-reaches-the-browser)
+- [Installation](#installation)
+- [Setting up Vite](#setting-up-vite)
+- [Setting up the runtime](#setting-up-the-runtime)
+- [A NestJS controller, unmodified](#a-nestjs-controller-unmodified)
+- [The frontend](#the-frontend)
+- [Supported decorators](#supported-decorators)
+- [Types are projected, not regenerated](#types-are-projected-not-regenerated)
+- [Unsupported (by design, for this MVP)](#unsupported-by-design-for-this-mvp)
+- [DTOs](#dtos)
+- [Development mode](#development-mode)
+- [Architecture](#architecture)
+- [Commands](#commands)
+- [Limitations](#limitations)
+
 ## Why NestBridge exists
 
 Sharing types between a NestJS backend and its frontend usually means
@@ -303,14 +322,28 @@ type RemoteResult<T> = T extends (...args: never[]) => infer Result
   : never;
 ```
 
+which is exactly what a generated declaration looks like on disk:
+
 ```ts
-// generated
-findOne(...args: Parameters<ServerUsersController['findOne']>): RemoteResult<ServerUsersController['findOne']>;
+// .nestbridge/server/src/users/users.controller.d.ts
+import type { UsersController as __ServerUsersController } from '../../server/src/users/users.controller';
+import type { RemoteResult } from '@nestbridge/runtime';
+
+export declare class UsersController {
+  constructor();
+
+  findOne(...args: Parameters<__ServerUsersController['findOne']>): RemoteResult<__ServerUsersController['findOne']>;
+  create(...args: Parameters<__ServerUsersController['create']>): RemoteResult<__ServerUsersController['create']>;
+}
 ```
 
-Declaring it as a method (rather than a property typed as a function) keeps
-IDE hovers and quick-documentation showing a normal method signature instead
-of a function-typed property.
+Declaring each member as a method (rather than a property typed as a
+function) keeps IDE hovers and quick-documentation showing a normal method
+signature instead of a function-typed property. `@nestbridge/runtime` also
+exports `RemoteMethod<T>` — `Parameters<T>` and `RemoteResult<T>` combined
+into a single callable type — for cases outside code generation where you
+want the whole thing as one type (writing a manual SDK wrapper, a mock, a
+test double).
 
 Because this is a real TypeScript type operation — not a reprint — it works
 whether or not the method has an explicit return type annotation:
@@ -324,9 +357,9 @@ findOne(@Param('id') id: string) { return this.usersService.findOne(id); }
 Inferred return types — including nested object-literal shapes and literal
 types (`{ theme: 'dark' as const }`) — carry through exactly as TypeScript
 infers them, since the client type comes from indexing the real controller's
-type (`ServerUsersController['findOne']`), not from NestBridge's own
+type (`__ServerUsersController['findOne']`), not from NestBridge's own
 analysis. The type-only import (`import type { UsersController as
-ServerUsersController } from '...'`) is erased at compile time — the real
+__ServerUsersController } from '...'`) is erased at compile time — the real
 controller implementation, its NestJS decorators, and its dependencies never
 reach the client bundle.
 
