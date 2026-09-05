@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -41,6 +41,8 @@ jobs:
 
       - name: Derive Nx base/head SHAs
         uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: master
 
       - name: Lint affected
         run: yarn nx affected -t lint
