@@ -29,8 +29,9 @@ controller's real signatures, so autocomplete, parameter types, and return
 types all work as if you were calling the controller directly.
 
 This `nestbridge` package is a single-package convenience entry point: it
-re-exports `@nestbridge/runtime`'s API and `@nestbridge/vite`'s plugin so you
-can depend on one package instead of wiring up the two separately.
+re-exports `@nestbridge/runtime`'s API and `@nestbridge/vite`'s and
+`@nestbridge/webpack`'s plugins so you can depend on one package instead of
+wiring up the pieces separately.
 
 ```ts
 import { configureNestBridge } from 'nestbridge';
@@ -57,10 +58,13 @@ export default defineConfig({
   / `RemoteMethod` / `RemoteResult` types.
 - `nestbridge/vite` re-exports `@nestbridge/vite`'s `nestBridge` plugin as its
   default export, plus the `NestBridgeOptions` type.
+- `nestbridge/webpack` re-exports `@nestbridge/webpack`'s `nestBridge` plugin
+  as its default export, plus the `NestBridgeOptions` type.
 
-If you need the lower-level static-analysis package directly, install
-`@nestbridge/core` on its own — it isn't re-exported here since it's an
-implementation detail of `@nestbridge/vite`, not part of the public
+If you need the lower-level static-analysis or bundler-agnostic packages
+directly, install `@nestbridge/core` or `@nestbridge/unplugin` on their
+own — neither is re-exported here since they're implementation details of
+`@nestbridge/vite`/`@nestbridge/webpack`, not part of the public
 runtime/plugin surface.
 
 ## Contents
@@ -186,14 +190,19 @@ This is a Yarn (Berry) + Nx monorepo. From the repo root:
 yarn install
 ```
 
-In your own project, install the three packages:
+In your own project, install `@nestbridge/runtime` plus a bundler plugin —
+`@nestbridge/vite` for Vite, or `@nestbridge/webpack` for webpack:
 
 ```bash
-yarn add -D @nestbridge/vite
+yarn add -D @nestbridge/vite       # or: yarn add -D @nestbridge/webpack
 yarn add @nestbridge/runtime
 ```
 
-`@nestbridge/core` is a dependency of `@nestbridge/vite` and is not usually
+`@nestbridge/vite` and `@nestbridge/webpack` are both thin bindings around
+[`@nestbridge/unplugin`](../unplugin), the bundler-agnostic engine that does
+the actual discovery, code generation, and declaration writing.
+`@nestbridge/unplugin` itself depends on `@nestbridge/core` for static
+analysis. Neither `@nestbridge/unplugin` nor `@nestbridge/core` is usually
 installed directly.
 
 ## Setting up Vite
@@ -256,6 +265,10 @@ interface NestBridgeOptions {
   outputDir?: string;               // defaults to ".nestbridge"
 }
 ```
+
+Using webpack instead of Vite? See [`@nestbridge/webpack`'s README](../webpack/README.md)
+for the equivalent setup — same options, same generated output, different
+bundler.
 
 ## Setting up the runtime
 
@@ -540,9 +553,12 @@ normal HMR machinery picks up the change — no dev-server restart required.
 ```text
 nestbridge/
   packages/
-    core/      @nestbridge/core     — static analysis (controllers + resolvers) + declaration generation
-    runtime/   @nestbridge/runtime  — browser client: fetch() for REST, graphql-request for GraphQL
-    vite/      @nestbridge/vite     — Vite plugin: discovery, virtual modules, HMR
+    core/       @nestbridge/core     — static analysis (controllers + resolvers) + declaration generation
+    runtime/    @nestbridge/runtime  — browser client: fetch() for REST, graphql-request for GraphQL
+    unplugin/   @nestbridge/unplugin — bundler-agnostic plugin: discovery, virtual modules, HMR
+    vite/       @nestbridge/vite     — thin Vite binding around @nestbridge/unplugin
+    webpack/    @nestbridge/webpack  — thin webpack binding around @nestbridge/unplugin
+    nestbridge/ nestbridge           — single-package facade re-exporting runtime + vite + webpack
   examples/
     basic/
       server/  a minimal NestJS app, with both a REST controller and a GraphQL resolver
@@ -556,17 +572,31 @@ Dependency graph:
 
 @nestbridge/runtime
 
+@nestbridge/unplugin
+    └── @nestbridge/core
+
 @nestbridge/vite
-    ├── @nestbridge/core
-    └── @nestbridge/runtime
+    └── @nestbridge/unplugin
+
+@nestbridge/webpack
+    └── @nestbridge/unplugin
+
+nestbridge
+    ├── @nestbridge/runtime
+    ├── @nestbridge/vite
+    └── @nestbridge/webpack
 ```
 
 ### Architectural constraints
 
-- `@nestbridge/core` never depends on Vite.
+- `@nestbridge/core` never depends on Vite or webpack.
 - `@nestbridge/runtime` never depends on NestJS.
-- `@nestbridge/vite` may depend on both.
-- No circular dependencies between the three packages.
+- `@nestbridge/unplugin` never depends on Vite or webpack directly — bundler
+  bindings come from the [`unplugin`](https://github.com/unjs/unplugin)
+  library.
+- `@nestbridge/vite` and `@nestbridge/webpack` are thin bindings around
+  `@nestbridge/unplugin` and add no plugin logic of their own.
+- No circular dependencies between packages.
 
 ### Toolchain
 

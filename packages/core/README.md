@@ -8,11 +8,13 @@ Static analysis of NestJS controllers and GraphQL resolvers, and generation
 of the client-facing `.d.ts` declarations that make them safely importable
 from the browser.
 
-This package has no runtime dependency on NestJS, Vite, or the DOM — it reads
-TypeScript source text via the TypeScript Compiler API and never executes
-your code. It's the engine behind `@nestbridge/vite` and is not usually
-installed directly; see the [repository README](../../README.md) for the
-full picture of how the pieces fit together.
+This package has no runtime dependency on NestJS, Vite, webpack, or the DOM
+— it reads TypeScript source text via the TypeScript Compiler API and never
+executes your code. It's the static-analysis engine behind
+[`@nestbridge/unplugin`](../unplugin) (and, through it,
+`@nestbridge/vite`/`@nestbridge/webpack`) and is not usually installed
+directly; see the [repository README](../../README.md) for the full picture
+of how the pieces fit together.
 
 ## Install
 
