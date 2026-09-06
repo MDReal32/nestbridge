@@ -28,6 +28,10 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "nursery": {
+        "useExplicitReturnType": "off",
+        "useExplicitType": "off"
+      },
       "style": {
         "noDefaultExport": "error",
         "useImportType": "error"

@@ -6,6 +6,7 @@
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "strict": true,
+    "noImplicitReturns": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
     "declaration": true,
