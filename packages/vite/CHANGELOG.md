@@ -1,5 +1,13 @@
 # @nestbridge/vite
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [020df80]
+  - @nestbridge/runtime@1.1.1
+  - @nestbridge/core@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes
