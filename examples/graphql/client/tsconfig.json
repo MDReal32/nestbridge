@@ -4,7 +4,6 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": [],
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "@server/*": ["./.nestbridge/server/src/*"]
     }
