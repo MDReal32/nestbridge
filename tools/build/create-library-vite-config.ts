@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import dts from 'vite-plugin-dts';
+import { dts } from 'rolldown-plugin-dts';
 import { defineConfig } from 'vitest/config';
 
 interface PackageManifest {
@@ -20,19 +20,18 @@ const readPackageManifest = (root: string) => {
 const moduleNameFromPackageName = (packageName: string) =>
   packageName.replace(/^@nestbridge\//, '');
 
+const dtsPlugins = (tsconfigPath: string) =>
+  dts({ tsconfig: tsconfigPath, generator: 'oxc' }).map(plugin =>
+    plugin.name.endsWith('fake-js') ? { ...plugin, enforce: 'pre' as const } : plugin,
+  );
+
 export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
   const manifest = readPackageManifest(options.root);
   const moduleName = moduleNameFromPackageName(manifest.name);
   const outputFileName = `nestbridge.${moduleName}.js`;
 
-  return defineConfig({
-    plugins: [
-      dts({
-        tsconfigPath: resolve(options.root, 'tsconfig.json'),
-        rollupTypes: true,
-        include: ['src'],
-      }),
-    ],
+  return defineConfig(({ command }) => ({
+    plugins: command === 'build' ? dtsPlugins(resolve(options.root, 'tsconfig.json')) : [],
     build: {
       target: 'esnext',
       sourcemap: true,
@@ -53,7 +52,7 @@ export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
       environment: 'node',
       include: ['tests/**/*.test.ts'],
     },
-  });
+  }));
 };
 
 export interface MultiEntryLibraryViteConfigOptions {
@@ -62,14 +61,8 @@ export interface MultiEntryLibraryViteConfigOptions {
 }
 
 export const createMultiEntryLibraryViteConfig = (options: MultiEntryLibraryViteConfigOptions) => {
-  return defineConfig({
-    plugins: [
-      dts({
-        tsconfigPath: resolve(options.root, 'tsconfig.json'),
-        rollupTypes: true,
-        include: ['src'],
-      }),
-    ],
+  return defineConfig(({ command }) => ({
+    plugins: command === 'build' ? dtsPlugins(resolve(options.root, 'tsconfig.json')) : [],
     build: {
       target: 'esnext',
       sourcemap: true,
@@ -93,5 +86,5 @@ export const createMultiEntryLibraryViteConfig = (options: MultiEntryLibraryVite
       environment: 'node',
       include: ['tests/**/*.test.ts'],
     },
-  });
+  }));
 };
