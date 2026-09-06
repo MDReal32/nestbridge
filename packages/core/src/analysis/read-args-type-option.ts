@@ -1,4 +1,13 @@
-import ts from 'typescript';
+import type { Decorator, PropertyAssignment } from 'typescript/unstable/ast';
+import {
+  isArrayLiteralExpression,
+  isArrowFunction,
+  isCallExpression,
+  isFunctionExpression,
+  isIdentifier,
+  isObjectLiteralExpression,
+  isPropertyAssignment,
+} from 'typescript/unstable/ast';
 import { readTypeThunkExpression } from './read-type-thunk-expression';
 
 export interface ArgsTypeOption {
@@ -6,21 +15,21 @@ export interface ArgsTypeOption {
   isArray: boolean;
 }
 
-export const readArgsTypeOption = (decorator: ts.Decorator): ArgsTypeOption | undefined => {
-  if (!ts.isCallExpression(decorator.expression)) {
+export const readArgsTypeOption = (decorator: Decorator): ArgsTypeOption | undefined => {
+  if (!isCallExpression(decorator.expression)) {
     return undefined;
   }
 
-  const optionsArgument = decorator.expression.arguments.find(ts.isObjectLiteralExpression);
+  const optionsArgument = decorator.expression.arguments.find(isObjectLiteralExpression);
 
   if (optionsArgument === undefined) {
     return undefined;
   }
 
   const typeProperty = optionsArgument.properties.find(
-    (property): property is ts.PropertyAssignment =>
-      ts.isPropertyAssignment(property) &&
-      ts.isIdentifier(property.name) &&
+    (property): property is PropertyAssignment =>
+      isPropertyAssignment(property) &&
+      isIdentifier(property.name) &&
       property.name.text === 'type',
   );
 
@@ -30,7 +39,7 @@ export const readArgsTypeOption = (decorator: ts.Decorator): ArgsTypeOption | un
 
   const thunk = typeProperty.initializer;
 
-  if (!ts.isArrowFunction(thunk) && !ts.isFunctionExpression(thunk)) {
+  if (!isArrowFunction(thunk) && !isFunctionExpression(thunk)) {
     return undefined;
   }
 
@@ -40,14 +49,14 @@ export const readArgsTypeOption = (decorator: ts.Decorator): ArgsTypeOption | un
     return undefined;
   }
 
-  if (ts.isArrayLiteralExpression(returnedExpression)) {
+  if (isArrayLiteralExpression(returnedExpression)) {
     const element = returnedExpression.elements[0];
-    return element !== undefined && ts.isIdentifier(element)
+    return element !== undefined && isIdentifier(element)
       ? { typeName: element.text, isArray: true }
       : undefined;
   }
 
-  return ts.isIdentifier(returnedExpression)
+  return isIdentifier(returnedExpression)
     ? { typeName: returnedExpression.text, isArray: false }
     : undefined;
 };

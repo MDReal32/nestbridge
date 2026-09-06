@@ -1,4 +1,4 @@
-import type ts from 'typescript';
+import type { MethodDeclaration, SourceFile } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import { HTTP_METHOD_DECORATOR_NAMES } from '../models/http-method';
 import {
@@ -12,17 +12,14 @@ import { readResponseKind } from './read-response-kind';
 import { joinRoutePath } from './route-path';
 
 interface ExtractionContext {
-  sourceFile: ts.SourceFile;
+  sourceFile: SourceFile;
   filePath: string;
   controllerName: string;
   controllerPath: string;
   diagnostics: NestBridgeDiagnostic[];
 }
 
-export const extractMethodDefinition = (
-  method: ts.MethodDeclaration,
-  context: ExtractionContext,
-) => {
+export const extractMethodDefinition = (method: MethodDeclaration, context: ExtractionContext) => {
   const decorator = findAnyDecorator(method, Object.keys(HTTP_METHOD_DECORATOR_NAMES));
 
   if (decorator === undefined) {

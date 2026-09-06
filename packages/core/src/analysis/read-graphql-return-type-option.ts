@@ -1,14 +1,21 @@
-import ts from 'typescript';
+import type { ArrowFunction, Decorator, FunctionExpression } from 'typescript/unstable/ast';
+import {
+  isArrayLiteralExpression,
+  isArrowFunction,
+  isCallExpression,
+  isFunctionExpression,
+  isIdentifier,
+} from 'typescript/unstable/ast';
 import { readTypeThunkExpression } from './read-type-thunk-expression';
 
-export const readGraphqlReturnTypeOption = (decorator: ts.Decorator): string | undefined => {
-  if (!ts.isCallExpression(decorator.expression)) {
+export const readGraphqlReturnTypeOption = (decorator: Decorator): string | undefined => {
+  if (!isCallExpression(decorator.expression)) {
     return undefined;
   }
 
   const thunk = decorator.expression.arguments.find(
-    (argument): argument is ts.ArrowFunction | ts.FunctionExpression =>
-      ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
+    (argument): argument is ArrowFunction | FunctionExpression =>
+      isArrowFunction(argument) || isFunctionExpression(argument),
   );
 
   if (thunk === undefined) {
@@ -21,10 +28,10 @@ export const readGraphqlReturnTypeOption = (decorator: ts.Decorator): string | u
     return undefined;
   }
 
-  if (ts.isArrayLiteralExpression(returnedExpression)) {
+  if (isArrayLiteralExpression(returnedExpression)) {
     const element = returnedExpression.elements[0];
-    return element !== undefined && ts.isIdentifier(element) ? element.text : undefined;
+    return element !== undefined && isIdentifier(element) ? element.text : undefined;
   }
 
-  return ts.isIdentifier(returnedExpression) ? returnedExpression.text : undefined;
+  return isIdentifier(returnedExpression) ? returnedExpression.text : undefined;
 };

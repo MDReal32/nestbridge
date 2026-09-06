@@ -1,4 +1,4 @@
-import type ts from 'typescript';
+import type { MethodDeclaration, SourceFile } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import { GRAPHQL_OPERATION_DECORATOR_NAMES } from '../models/graphql-operation-kind';
 import type { SelectionField } from '../models/selection-field';
@@ -14,14 +14,14 @@ import { resolveClassDeclaration } from './resolve-type-declaration';
 const PRIMITIVE_SCALAR_NAMES = new Set(['string', 'number', 'boolean']);
 
 interface ExtractionContext {
-  sourceFile: ts.SourceFile;
+  sourceFile: SourceFile;
   filePath: string;
   resolverName: string;
   diagnostics: NestBridgeDiagnostic[];
 }
 
 export const extractResolverMethodDefinition = (
-  method: ts.MethodDeclaration,
+  method: MethodDeclaration,
   context: ExtractionContext,
 ) => {
   const decorator = findAnyDecorator(method, Object.keys(GRAPHQL_OPERATION_DECORATOR_NAMES));

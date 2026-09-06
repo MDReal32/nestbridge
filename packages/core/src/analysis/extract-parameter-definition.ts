@@ -1,4 +1,5 @@
-import ts from 'typescript';
+import type { ParameterDeclaration, SourceFile } from 'typescript/unstable/ast';
+import { isIdentifier } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import type { ControllerParameterDefinition } from '../models/controller-parameter-definition';
 import {
@@ -12,7 +13,7 @@ const SUPPORTED_PARAMETER_DECORATORS = ['Param', 'Query', 'Body', 'Headers'] as 
 const KNOWN_UNSUPPORTED_PARAMETER_DECORATORS = ['Req', 'Res', 'Request', 'Response'] as const;
 
 interface ExtractionContext {
-  sourceFile: ts.SourceFile;
+  sourceFile: SourceFile;
   filePath: string;
   controllerName: string;
   methodName: string;
@@ -20,7 +21,7 @@ interface ExtractionContext {
 }
 
 export const extractParameterDefinition = (
-  parameter: ts.ParameterDeclaration,
+  parameter: ParameterDeclaration,
   index: number,
   context: ExtractionContext,
 ): ControllerParameterDefinition | undefined => {
@@ -63,7 +64,7 @@ export const extractParameterDefinition = (
     return undefined;
   }
 
-  if (!ts.isIdentifier(parameter.name)) {
+  if (!isIdentifier(parameter.name)) {
     context.diagnostics.push({
       code: 'unsupported-parameter',
       title: 'Unsupported parameter.',

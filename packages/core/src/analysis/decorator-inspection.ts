@@ -1,14 +1,29 @@
-import ts from 'typescript';
+import type {
+  ClassDeclaration,
+  Decorator,
+  MethodDeclaration,
+  ParameterDeclaration,
+  PropertyDeclaration,
+} from 'typescript/unstable/ast';
+import {
+  isCallExpression,
+  isDecorator,
+  isIdentifier,
+  isStringLiteralLikeNode,
+} from 'typescript/unstable/ast';
+
+const getDecorators = (
+  node: ClassDeclaration | MethodDeclaration | ParameterDeclaration | PropertyDeclaration,
+) => {
+  const decorators = node.modifiers?.filter(isDecorator);
+  return decorators === undefined || decorators.length === 0 ? undefined : decorators;
+};
 
 export const findDecorator = (
-  node:
-    | ts.ClassDeclaration
-    | ts.MethodDeclaration
-    | ts.ParameterDeclaration
-    | ts.PropertyDeclaration,
+  node: ClassDeclaration | MethodDeclaration | ParameterDeclaration | PropertyDeclaration,
   decoratorName: string,
 ) => {
-  const decorators = ts.getDecorators(node);
+  const decorators = getDecorators(node);
 
   if (decorators === undefined) {
     return undefined;
@@ -18,14 +33,10 @@ export const findDecorator = (
 };
 
 export const findAnyDecorator = (
-  node:
-    | ts.ClassDeclaration
-    | ts.MethodDeclaration
-    | ts.ParameterDeclaration
-    | ts.PropertyDeclaration,
+  node: ClassDeclaration | MethodDeclaration | ParameterDeclaration | PropertyDeclaration,
   decoratorNames: readonly string[],
 ) => {
-  const decorators = ts.getDecorators(node);
+  const decorators = getDecorators(node);
 
   if (decorators === undefined) {
     return undefined;
@@ -34,24 +45,24 @@ export const findAnyDecorator = (
   return decorators.find((decorator) => decoratorNames.includes(decoratorNameOf(decorator) ?? ''));
 };
 
-export const decoratorNameOf = (decorator: ts.Decorator) => {
+export const decoratorNameOf = (decorator: Decorator) => {
   const expression = decorator.expression;
 
-  if (ts.isCallExpression(expression) && ts.isIdentifier(expression.expression)) {
+  if (isCallExpression(expression) && isIdentifier(expression.expression)) {
     return expression.expression.text;
   }
 
-  if (ts.isIdentifier(expression)) {
+  if (isIdentifier(expression)) {
     return expression.text;
   }
 
   return undefined;
 };
 
-export const readStaticStringArgument = (decorator: ts.Decorator) => {
+export const readStaticStringArgument = (decorator: Decorator) => {
   const expression = decorator.expression;
 
-  if (!ts.isCallExpression(expression)) {
+  if (!isCallExpression(expression)) {
     return { ok: true, value: undefined };
   }
 
@@ -61,7 +72,7 @@ export const readStaticStringArgument = (decorator: ts.Decorator) => {
     return { ok: true, value: undefined };
   }
 
-  if (ts.isStringLiteralLike(firstArgument)) {
+  if (isStringLiteralLikeNode(firstArgument)) {
     return { ok: true, value: firstArgument.text };
   }
 

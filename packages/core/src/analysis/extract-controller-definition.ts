@@ -1,12 +1,13 @@
-import ts from 'typescript';
+import type { ClassDeclaration, MethodDeclaration, SourceFile } from 'typescript/unstable/ast';
+import { isMethodDeclaration } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import { findDecorator, readStaticStringArgument } from './decorator-inspection';
 import { extractMethodDefinition } from './extract-method-definition';
 import { locationOf } from './node-location';
 
 export const extractControllerDefinition = (
-  classDeclaration: ts.ClassDeclaration,
-  sourceFile: ts.SourceFile,
+  classDeclaration: ClassDeclaration,
+  sourceFile: SourceFile,
   filePath: string,
   diagnostics: NestBridgeDiagnostic[],
 ) => {
@@ -36,7 +37,7 @@ export const extractControllerDefinition = (
   }
 
   const methods = classDeclaration.members
-    .filter((member): member is ts.MethodDeclaration => ts.isMethodDeclaration(member))
+    .filter((member): member is MethodDeclaration => isMethodDeclaration(member))
     .map((method) =>
       extractMethodDefinition(method, {
         sourceFile,

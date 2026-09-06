@@ -1,10 +1,19 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
-import ts from 'typescript';
+import type { ClassDeclaration, SourceFile } from 'typescript/unstable/ast';
+import {
+  isClassDeclaration,
+  isExportDeclaration,
+  isImportDeclaration,
+  isNamedExports,
+  isNamedImports,
+  isStringLiteralLikeNode,
+} from 'typescript/unstable/ast';
+import { parseSourceFile } from './parse-source-file';
 
 export interface ResolvedTypeDeclaration {
-  classDeclaration: ts.ClassDeclaration;
-  sourceFile: ts.SourceFile;
+  classDeclaration: ClassDeclaration;
+  sourceFile: SourceFile;
   filePath: string;
 }
 
@@ -13,23 +22,16 @@ interface ImportSource {
   importedName: string;
 }
 
-const parsedFilesByPath = new Map<string, ts.SourceFile>();
+const parsedFilesByPath = new Map<string, SourceFile>();
 
-const parseFile = (filePath: string): ts.SourceFile => {
+const parseFile = (filePath: string): SourceFile => {
   const cached = parsedFilesByPath.get(filePath);
 
   if (cached !== undefined) {
     return cached;
   }
 
-  const content = readFileSync(filePath, 'utf-8');
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    content,
-    ts.ScriptTarget.ESNext,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const sourceFile = parseSourceFile(filePath);
   parsedFilesByPath.set(filePath, sourceFile);
   return sourceFile;
 };
@@ -49,26 +51,23 @@ const resolveModuleFile = (
 };
 
 const findExportedDeclaration = (
-  sourceFile: ts.SourceFile,
+  sourceFile: SourceFile,
   name: string,
-): ts.ClassDeclaration | undefined =>
+): ClassDeclaration | undefined =>
   sourceFile.statements.find(
-    (statement): statement is ts.ClassDeclaration =>
-      ts.isClassDeclaration(statement) && statement.name?.text === name,
+    (statement): statement is ClassDeclaration =>
+      isClassDeclaration(statement) && statement.name?.text === name,
   );
 
-const findImportSource = (
-  sourceFile: ts.SourceFile,
-  localName: string,
-): ImportSource | undefined => {
+const findImportSource = (sourceFile: SourceFile, localName: string): ImportSource | undefined => {
   for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) {
+    if (!isImportDeclaration(statement) || !isStringLiteralLikeNode(statement.moduleSpecifier)) {
       continue;
     }
 
     const namedBindings = statement.importClause?.namedBindings;
 
-    if (namedBindings === undefined || !ts.isNamedImports(namedBindings)) {
+    if (namedBindings === undefined || !isNamedImports(namedBindings)) {
       continue;
     }
 
@@ -85,12 +84,12 @@ const findImportSource = (
   return undefined;
 };
 
-const findReExportSource = (sourceFile: ts.SourceFile, name: string): string | undefined => {
+const findReExportSource = (sourceFile: SourceFile, name: string): string | undefined => {
   for (const statement of sourceFile.statements) {
     if (
-      !ts.isExportDeclaration(statement) ||
+      !isExportDeclaration(statement) ||
       statement.moduleSpecifier === undefined ||
-      !ts.isStringLiteralLike(statement.moduleSpecifier)
+      !isStringLiteralLikeNode(statement.moduleSpecifier)
     ) {
       continue;
     }
@@ -100,7 +99,7 @@ const findReExportSource = (sourceFile: ts.SourceFile, name: string): string | u
     }
 
     if (
-      ts.isNamedExports(statement.exportClause) &&
+      isNamedExports(statement.exportClause) &&
       statement.exportClause.elements.some(
         (element) => (element.propertyName?.text ?? element.name.text) === name,
       )
@@ -114,7 +113,7 @@ const findReExportSource = (sourceFile: ts.SourceFile, name: string): string | u
 
 export const resolveClassDeclaration = (
   name: string,
-  fromSourceFile: ts.SourceFile,
+  fromSourceFile: SourceFile,
   fromFilePath: string,
   visited: Set<string> = new Set(),
 ): ResolvedTypeDeclaration | undefined => {

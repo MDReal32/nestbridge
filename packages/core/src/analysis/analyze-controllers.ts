@@ -1,23 +1,17 @@
-import { readFileSync } from 'node:fs';
-import ts from 'typescript';
 import type { NestBridgeDiagnostic } from '../diagnostics';
 import type { ControllerDefinition } from '../models';
 import { extractControllerDefinition } from './extract-controller-definition';
 import { findControllerClasses } from './find-controller-classes';
+import { parseSourceFile } from './parse-source-file';
 
-export const analyzeControllers = (filePaths: readonly string[]) => {
+export const analyzeControllers = (
+  filePaths: readonly string[],
+): { controllers: ControllerDefinition[]; diagnostics: NestBridgeDiagnostic[] } => {
   const diagnostics: NestBridgeDiagnostic[] = [];
   const controllers: ControllerDefinition[] = [];
 
   for (const filePath of filePaths) {
-    const content = readFileSync(filePath, 'utf-8');
-    const sourceFile = ts.createSourceFile(
-      filePath,
-      content,
-      ts.ScriptTarget.ESNext,
-      true,
-      ts.ScriptKind.TS,
-    );
+    const sourceFile = parseSourceFile(filePath);
 
     for (const classDeclaration of findControllerClasses(sourceFile)) {
       const controller = extractControllerDefinition(

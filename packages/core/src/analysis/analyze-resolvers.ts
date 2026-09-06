@@ -1,23 +1,17 @@
-import { readFileSync } from 'node:fs';
-import ts from 'typescript';
 import type { NestBridgeDiagnostic } from '../diagnostics';
 import type { ResolverDefinition } from '../models';
 import { extractResolverDefinition } from './extract-resolver-definition';
 import { findResolverClasses } from './find-resolver-classes';
+import { parseSourceFile } from './parse-source-file';
 
-export const analyzeResolvers = (filePaths: readonly string[]) => {
+export const analyzeResolvers = (
+  filePaths: readonly string[],
+): { resolvers: ResolverDefinition[]; diagnostics: NestBridgeDiagnostic[] } => {
   const diagnostics: NestBridgeDiagnostic[] = [];
   const resolvers: ResolverDefinition[] = [];
 
   for (const filePath of filePaths) {
-    const content = readFileSync(filePath, 'utf-8');
-    const sourceFile = ts.createSourceFile(
-      filePath,
-      content,
-      ts.ScriptTarget.ESNext,
-      true,
-      ts.ScriptKind.TS,
-    );
+    const sourceFile = parseSourceFile(filePath);
 
     for (const classDeclaration of findResolverClasses(sourceFile)) {
       const resolver = extractResolverDefinition(

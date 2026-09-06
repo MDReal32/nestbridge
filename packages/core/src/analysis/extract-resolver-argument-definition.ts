@@ -1,4 +1,5 @@
-import ts from 'typescript';
+import type { ParameterDeclaration, SourceFile } from 'typescript/unstable/ast';
+import { isIdentifier } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import type { ResolverArgumentDefinition } from '../models/resolver-argument-definition';
 import { findAnyDecorator, readStaticStringArgument } from './decorator-inspection';
@@ -7,7 +8,7 @@ import { locationOf } from './node-location';
 import { readArgsTypeOption } from './read-args-type-option';
 
 interface ExtractionContext {
-  sourceFile: ts.SourceFile;
+  sourceFile: SourceFile;
   filePath: string;
   resolverName: string;
   methodName: string;
@@ -15,7 +16,7 @@ interface ExtractionContext {
 }
 
 export const extractResolverArgumentDefinition = (
-  parameter: ts.ParameterDeclaration,
+  parameter: ParameterDeclaration,
   index: number,
   context: ExtractionContext,
 ): ResolverArgumentDefinition | undefined => {
@@ -36,7 +37,7 @@ export const extractResolverArgumentDefinition = (
     return undefined;
   }
 
-  if (!ts.isIdentifier(parameter.name)) {
+  if (!isIdentifier(parameter.name)) {
     context.diagnostics.push({
       code: 'unsupported-argument',
       title: 'Unsupported argument.',

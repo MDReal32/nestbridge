@@ -1,4 +1,5 @@
-import ts from 'typescript';
+import type { ClassDeclaration, PropertyDeclaration, SourceFile } from 'typescript/unstable/ast';
+import { isIdentifier, isPropertyDeclaration } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
 import type { SelectionField } from '../models/selection-field';
 import { findDecorator } from './decorator-inspection';
@@ -16,8 +17,8 @@ interface SelectionContext {
 }
 
 export const extractSelectionFields = (
-  classDeclaration: ts.ClassDeclaration,
-  sourceFile: ts.SourceFile,
+  classDeclaration: ClassDeclaration,
+  sourceFile: SourceFile,
   filePath: string,
   context: SelectionContext,
 ): SelectionField[] | undefined => {
@@ -41,14 +42,14 @@ export const extractSelectionFields = (
   const nextVisited = new Set(context.visitedTypeNames).add(typeName);
 
   const properties = classDeclaration.members.filter(
-    (member): member is ts.PropertyDeclaration =>
-      ts.isPropertyDeclaration(member) && findDecorator(member, 'Field') !== undefined,
+    (member): member is PropertyDeclaration =>
+      isPropertyDeclaration(member) && findDecorator(member, 'Field') !== undefined,
   );
 
   const fields: SelectionField[] = [];
 
   for (const property of properties) {
-    if (!ts.isIdentifier(property.name)) {
+    if (!isIdentifier(property.name)) {
       continue;
     }
 

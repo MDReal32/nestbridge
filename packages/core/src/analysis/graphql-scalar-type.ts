@@ -1,4 +1,11 @@
-import ts from 'typescript';
+import type { TypeNode } from 'typescript/unstable/ast';
+import {
+  isArrayTypeNode,
+  isIdentifier,
+  isTypeReferenceNode,
+  isUnionTypeNode,
+  SyntaxKind,
+} from 'typescript/unstable/ast';
 
 const PRIMITIVE_SCALAR_TYPES: Record<string, string> = {
   string: 'String',
@@ -12,10 +19,10 @@ export interface UnwrappedTypeNode {
   isNullable: boolean;
 }
 
-export const unwrapPromise = (typeNode: ts.TypeNode): ts.TypeNode => {
+export const unwrapPromise = (typeNode: TypeNode): TypeNode => {
   if (
-    ts.isTypeReferenceNode(typeNode) &&
-    ts.isIdentifier(typeNode.typeName) &&
+    isTypeReferenceNode(typeNode) &&
+    isIdentifier(typeNode.typeName) &&
     typeNode.typeName.text === 'Promise' &&
     typeNode.typeArguments?.[0] !== undefined
   ) {
@@ -25,14 +32,14 @@ export const unwrapPromise = (typeNode: ts.TypeNode): ts.TypeNode => {
   return typeNode;
 };
 
-const unwrapNullable = (typeNode: ts.TypeNode) => {
-  if (!ts.isUnionTypeNode(typeNode)) {
+const unwrapNullable = (typeNode: TypeNode) => {
+  if (!isUnionTypeNode(typeNode)) {
     return { inner: typeNode, isNullable: false };
   }
 
   const nonNullMembers = typeNode.types.filter(
     (member) =>
-      member.kind !== ts.SyntaxKind.NullKeyword && member.kind !== ts.SyntaxKind.UndefinedKeyword,
+      member.kind !== SyntaxKind.NullKeyword && member.kind !== SyntaxKind.UndefinedKeyword,
   );
   const [onlyMember] = nonNullMembers;
 
@@ -43,14 +50,14 @@ const unwrapNullable = (typeNode: ts.TypeNode) => {
   return { inner: onlyMember, isNullable: true };
 };
 
-const unwrapArrayElement = (typeNode: ts.TypeNode): ts.TypeNode | undefined => {
-  if (ts.isArrayTypeNode(typeNode)) {
+const unwrapArrayElement = (typeNode: TypeNode): TypeNode | undefined => {
+  if (isArrayTypeNode(typeNode)) {
     return typeNode.elementType;
   }
 
   if (
-    ts.isTypeReferenceNode(typeNode) &&
-    ts.isIdentifier(typeNode.typeName) &&
+    isTypeReferenceNode(typeNode) &&
+    isIdentifier(typeNode.typeName) &&
     typeNode.typeName.text === 'Array' &&
     typeNode.typeArguments?.[0] !== undefined
   ) {
@@ -60,24 +67,24 @@ const unwrapArrayElement = (typeNode: ts.TypeNode): ts.TypeNode | undefined => {
   return undefined;
 };
 
-const identifierTextOf = (typeNode: ts.TypeNode): string | undefined => {
-  if (ts.isTypeReferenceNode(typeNode) && ts.isIdentifier(typeNode.typeName)) {
+const identifierTextOf = (typeNode: TypeNode): string | undefined => {
+  if (isTypeReferenceNode(typeNode) && isIdentifier(typeNode.typeName)) {
     return typeNode.typeName.text;
   }
 
   switch (typeNode.kind) {
-    case ts.SyntaxKind.StringKeyword:
+    case SyntaxKind.StringKeyword:
       return 'string';
-    case ts.SyntaxKind.NumberKeyword:
+    case SyntaxKind.NumberKeyword:
       return 'number';
-    case ts.SyntaxKind.BooleanKeyword:
+    case SyntaxKind.BooleanKeyword:
       return 'boolean';
     default:
       return undefined;
   }
 };
 
-export const unwrapTypeNode = (typeNode: ts.TypeNode): UnwrappedTypeNode | undefined => {
+export const unwrapTypeNode = (typeNode: TypeNode): UnwrappedTypeNode | undefined => {
   const withoutPromise = unwrapPromise(typeNode);
   const { inner: withoutNullable, isNullable } = unwrapNullable(withoutPromise);
   const arrayElement = unwrapArrayElement(withoutNullable);
