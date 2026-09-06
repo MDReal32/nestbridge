@@ -1,24 +1,23 @@
-import type { ClientError } from 'graphql-request';
-
-import { extractGraphqlErrorMessage } from './extract-graphql-error-message';
+import {
+  extractGraphqlErrorMessage,
+  type GraphqlErrorResponse,
+} from './extract-graphql-error-message';
 
 export class NestBridgeGraphqlError extends Error {
   readonly status: number;
-  readonly errors: ClientError['response']['errors'];
-  readonly data: ClientError['response']['data'];
-  readonly request: ClientError['request'];
+  readonly errors: GraphqlErrorResponse['errors'];
+  readonly data: GraphqlErrorResponse['data'];
 
-  constructor(clientError: ClientError, endpoint: string) {
-    const backendMessage = extractGraphqlErrorMessage(clientError.response);
+  constructor(response: GraphqlErrorResponse, endpoint: string) {
+    const backendMessage = extractGraphqlErrorMessage(response);
     const message = `NestBridge GraphQL request to ${endpoint} failed with status ${
-      clientError.response.status
+      response.status
     }.${backendMessage === undefined ? '' : ` ${backendMessage}`}`;
 
     super(message);
     this.name = 'NestBridgeGraphqlError';
-    this.status = clientError.response.status;
-    this.errors = clientError.response.errors;
-    this.data = clientError.response.data;
-    this.request = clientError.request;
+    this.status = response.status;
+    this.errors = response.errors;
+    this.data = response.data;
   }
 }
