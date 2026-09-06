@@ -16,14 +16,12 @@ env:
   NODE_VERSION: '24'
 
 jobs:
-  version-or-publish:
-    name: Version packages
+  release:
+    name: Version and publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-    outputs:
-      has-changesets: ${{ steps.status.outputs.has-changesets }}
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -44,34 +42,16 @@ jobs:
             echo "has-changesets=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create/update Version Packages PR
+      - name: Version packages
         if: steps.status.outputs.has-changesets == 'true'
-        uses: changesets/action@v1
-        with:
-          version: yarn run version
-          commit: "chore: version packages"
-          title: "chore: version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish to npm
-    needs: version-or-publish
-    if: needs.version-or-publish.outputs.has-changesets == 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup workspace
-        uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+        run: |
+          set -euo pipefail
+          yarn run version
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore: version packages"
+          git push origin HEAD:${{ github.ref_name }}
 
       - name: Build publishable packages (lint, typecheck, test, build)
         run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
