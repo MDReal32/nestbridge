@@ -17,11 +17,10 @@ env:
 
 jobs:
   release:
-    name: Version and publish
+    name: Version packages
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -53,41 +52,66 @@ jobs:
           git commit -m "chore: version packages"
           git push origin HEAD:${{ github.ref_name }}
 
-      - name: Build publishable packages (lint, typecheck, test, build)
-        run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
+  publish:
+    name: Publish ${{ matrix.project }}
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: core
+            dir: packages/core
+            expected: build/nestbridge.core.js build/nestbridge.core.d.ts
+          - project: runtime
+            dir: packages/runtime
+            expected: build/nestbridge.runtime.js build/nestbridge.runtime.d.ts
+          - project: vite
+            dir: packages/vite
+            expected: build/nestbridge.vite.js build/nestbridge.vite.d.ts
+          - project: nestbridge
+            dir: packages/nestbridge
+            expected: build/index.js build/index.d.ts build/vite.js build/vite.d.ts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build ${{ matrix.project }}
+        run: yarn nx run-many -t build --projects=${{ matrix.project }}
 
       - name: Verify build artifacts
         run: |
           set -euo pipefail
-          declare -A expected=(
-            [packages/core]="build/nestbridge.core.js build/nestbridge.core.d.ts"
-            [packages/runtime]="build/nestbridge.runtime.js build/nestbridge.runtime.d.ts"
-            [packages/vite]="build/nestbridge.vite.js build/nestbridge.vite.d.ts"
-            [packages/nestbridge]="build/index.js build/index.d.ts build/vite.js build/vite.d.ts"
-          )
-          for dir in "${!expected[@]}"; do
-            for file in ${expected[$dir]}; do
-              if [ ! -f "$dir/$file" ]; then
-                echo "::error::Missing expected build artifact: $dir/$file"
-                exit 1
-              fi
-            done
-            echo "Verified artifacts in $dir"
+          for file in ${{ matrix.expected }}; do
+            if [ ! -f "${{ matrix.dir }}/$file" ]; then
+              echo "::error::Missing expected build artifact: ${{ matrix.dir }}/$file"
+              exit 1
+            fi
           done
+          echo "Verified artifacts in ${{ matrix.dir }}"
 
-      - name: Publish packages to npm
+      - name: Publish to npm
         run: |
           set -euo pipefail
-          for dir in packages/core packages/runtime packages/vite packages/nestbridge; do
-            name=$(node -p "require('./$dir/package.json').name")
-            version=$(node -p "require('./$dir/package.json').version")
-            if npm view "$name@$version" version >/dev/null 2>&1; then
-              echo "$name@$version is already published, skipping"
-              continue
-            fi
-            echo "Publishing $name@$version"
-            (cd "$dir" && npm publish --access public --provenance)
-            git tag "$name@$version"
-            git push origin "$name@$version"
-            GH_TOKEN=${{ github.token }} gh release create "$name@$version" --title "$name@$version" --generate-notes
-          done
+          name=$(node -p "require('./${{ matrix.dir }}/package.json').name")
+          version=$(node -p "require('./${{ matrix.dir }}/package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published, skipping"
+            exit 0
+          fi
+          echo "Publishing $name@$version"
+          (cd "${{ matrix.dir }}" && npm publish --access public --provenance)
+          git tag "$name@$version"
+          git push origin "$name@$version"
+          GH_TOKEN=${{ github.token }} gh release create "$name@$version" --title "$name@$version" --generate-notes
