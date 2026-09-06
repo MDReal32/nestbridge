@@ -1,19 +1,19 @@
 {
-  "name": "@nestbridge/vite",
-  "version": "2.0.0",
+  "name": "@nestbridge/webpack",
+  "version": "1.1.1",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MDReal32/nestbridge.git",
-    "directory": "packages/vite"
+    "directory": "packages/webpack"
   },
-  "main": "./build/nestbridge.vite.js",
-  "types": "./build/nestbridge.vite.d.ts",
+  "main": "./build/nestbridge.webpack.js",
+  "types": "./build/nestbridge.webpack.d.ts",
   "exports": {
     ".": {
-      "types": "./build/nestbridge.vite.d.ts",
-      "import": "./build/nestbridge.vite.js"
+      "types": "./build/nestbridge.webpack.d.ts",
+      "import": "./build/nestbridge.webpack.js"
     }
   },
   "files": [
@@ -30,12 +30,14 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "esbuild-loader": "^4.5.0",
     "rolldown-plugin-dts": "^0.28.5",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "webpack": "^5.110.3"
   },
   "peerDependencies": {
-    "vite": "^8.2.2"
+    "webpack": "^5.110.3"
   }
 }

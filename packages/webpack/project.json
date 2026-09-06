@@ -1,0 +1,8 @@
+{
+  "name": "webpack",
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/build"]
+    }
+  }
+}

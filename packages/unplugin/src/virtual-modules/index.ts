@@ -1,0 +1,1 @@
+export { CONFIG_VIRTUAL_MODULE_ID, RESOLVED_CONFIG_VIRTUAL_MODULE_ID } from './config-virtual-id';

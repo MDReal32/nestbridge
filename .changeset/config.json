@@ -2,7 +2,16 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@nestbridge/core", "@nestbridge/runtime", "@nestbridge/vite", "nestbridge"]],
+  "fixed": [
+    [
+      "@nestbridge/core",
+      "@nestbridge/runtime",
+      "@nestbridge/unplugin",
+      "@nestbridge/vite",
+      "@nestbridge/webpack",
+      "nestbridge"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "master",

@@ -53,7 +53,7 @@
   },
   "overrides": [
     {
-      "includes": ["packages/vite/src/main.ts", "packages/nestbridge/src/vite.ts"],
+      "includes": ["packages/nestbridge/src/vite.ts", "packages/nestbridge/src/webpack.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -83,7 +83,7 @@
       }
     },
     {
-      "includes": ["packages/vite/src/**"],
+      "includes": ["packages/unplugin/src/**"],
       "linter": {
         "rules": {
           "suspicious": {

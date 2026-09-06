@@ -8,6 +8,7 @@ const options = (overrides: Partial<ResolvedNestBridgeOptions>): ResolvedNestBri
   baseURL: undefined,
   debug: false,
   outputDir: '.nestbridge',
+  root: undefined,
   ...overrides,
 });
 

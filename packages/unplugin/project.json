@@ -1,0 +1,8 @@
+{
+  "name": "unplugin",
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/build"]
+    }
+  }
+}

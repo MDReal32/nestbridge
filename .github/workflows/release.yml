@@ -70,7 +70,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Build packages
-        run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
+        run: yarn nx run-many -t build --projects=core,runtime,unplugin,vite,webpack,nestbridge
 
       - name: Verify build artifacts
         run: |
@@ -78,8 +78,10 @@ jobs:
           declare -A expected=(
             [packages/core]="build/nestbridge.core.js build/nestbridge.core.d.ts"
             [packages/runtime]="build/nestbridge.runtime.js build/nestbridge.runtime.d.ts"
+            [packages/unplugin]="build/nestbridge.unplugin.js build/nestbridge.unplugin.d.ts"
             [packages/vite]="build/nestbridge.vite.js build/nestbridge.vite.d.ts"
-            [packages/nestbridge]="build/index.js build/index.d.ts build/vite.js build/vite.d.ts"
+            [packages/webpack]="build/nestbridge.webpack.js build/nestbridge.webpack.d.ts"
+            [packages/nestbridge]="build/index.js build/index.d.ts build/vite.js build/vite.d.ts build/webpack.js build/webpack.d.ts"
           )
           for dir in "${!expected[@]}"; do
             for file in ${expected[$dir]}; do
@@ -99,7 +101,9 @@ jobs:
           path: |
             packages/core/build
             packages/runtime/build
+            packages/unplugin/build
             packages/vite/build
+            packages/webpack/build
             packages/nestbridge/build
 
   publish:
@@ -117,8 +121,12 @@ jobs:
             dir: packages/core
           - project: runtime
             dir: packages/runtime
+          - project: unplugin
+            dir: packages/unplugin
           - project: vite
             dir: packages/vite
+          - project: webpack
+            dir: packages/webpack
           - project: nestbridge
             dir: packages/nestbridge
     steps:

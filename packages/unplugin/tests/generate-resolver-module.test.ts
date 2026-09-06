@@ -1,6 +1,7 @@
 import type { ResolverMethodDefinition } from '@nestbridge/core';
 import { describe, expect, it } from 'vitest';
 import { generateResolverModule } from '../src/codegen';
+import { CONFIG_VIRTUAL_MODULE_ID } from '../src/virtual-modules';
 
 const method = (overrides: Partial<ResolverMethodDefinition>): ResolverMethodDefinition => ({
   name: 'findOne',
@@ -31,7 +32,7 @@ describe('generateResolverModule', () => {
   it('imports the config virtual module so the resolved baseURL is applied', () => {
     const code = generateResolverModule(resolver([]));
 
-    expect(code).toContain("import 'virtual:nestbridge/config';");
+    expect(code).toContain(`import '${CONFIG_VIRTUAL_MODULE_ID}';`);
   });
 
   it('builds a document with variables and field arguments for a query with args', () => {

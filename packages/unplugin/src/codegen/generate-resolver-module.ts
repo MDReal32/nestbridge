@@ -3,6 +3,7 @@ import type {
   ResolverDefinition,
   ResolverMethodDefinition,
 } from '@nestbridge/core';
+import { CONFIG_VIRTUAL_MODULE_ID } from '../virtual-modules';
 import { generateGraphqlDocument } from './generate-graphql-document';
 import { generateResolverArgumentList } from './generate-resolver-argument-list';
 
@@ -41,7 +42,7 @@ export const generateResolverModule = (resolver: ResolverDefinition) => {
   const methods = resolver.methods.map(generateMethod).join('\n\n');
 
   return [
-    "import 'virtual:nestbridge/config';",
+    `import '${CONFIG_VIRTUAL_MODULE_ID}';`,
     "import { graphqlRequest } from 'nestbridge';",
     '',
     `export class ${resolver.name} {`,

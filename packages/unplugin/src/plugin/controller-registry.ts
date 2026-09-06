@@ -3,8 +3,8 @@ import {
   type ControllerDefinition,
   type NestBridgeDiagnostic,
 } from '@nestbridge/core';
-import { normalizePath } from 'vite';
 import { discoverFiles } from '../discovery';
+import { normalizePath } from './normalize-path';
 
 export interface ControllerRegistryRefreshResult {
   controllers: ControllerDefinition[];

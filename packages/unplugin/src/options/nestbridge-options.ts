@@ -4,6 +4,7 @@ export interface NestBridgeOptions {
   baseURL?: string;
   debug?: boolean;
   outputDir?: string;
+  root?: string;
 }
 
 export interface ResolvedNestBridgeOptions {
@@ -12,6 +13,7 @@ export interface ResolvedNestBridgeOptions {
   baseURL: string | undefined;
   debug: boolean;
   outputDir: string;
+  root: string | undefined;
 }
 
 export const resolveNestBridgeOptions = (
@@ -27,4 +29,5 @@ export const resolveNestBridgeOptions = (
   baseURL: options.baseURL,
   debug: options.debug ?? false,
   outputDir: options.outputDir ?? '.nestbridge',
+  root: options.root,
 });

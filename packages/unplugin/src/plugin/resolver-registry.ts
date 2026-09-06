@@ -3,8 +3,8 @@ import {
   type NestBridgeDiagnostic,
   type ResolverDefinition,
 } from '@nestbridge/core';
-import { normalizePath } from 'vite';
 import { discoverFiles } from '../discovery';
+import { normalizePath } from './normalize-path';
 
 export interface ResolverRegistryRefreshResult {
   resolvers: ResolverDefinition[];

@@ -16,6 +16,10 @@
     "./vite": {
       "types": "./build/vite.d.ts",
       "import": "./build/vite.js"
+    },
+    "./webpack": {
+      "types": "./build/webpack.d.ts",
+      "import": "./build/webpack.js"
     }
   },
   "files": [
@@ -29,7 +33,8 @@
   },
   "dependencies": {
     "@nestbridge/runtime": "workspace:*",
-    "@nestbridge/vite": "workspace:*"
+    "@nestbridge/vite": "workspace:*",
+    "@nestbridge/webpack": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

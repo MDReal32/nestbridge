@@ -1,4 +1,5 @@
 import type { ControllerDefinition, ControllerMethodDefinition } from '@nestbridge/core';
+import { CONFIG_VIRTUAL_MODULE_ID } from '../virtual-modules';
 import { generateBodyExpression } from './generate-body-expression';
 import { generateHeadersExpression } from './generate-headers-expression';
 import { generateParameterList } from './generate-parameter-list';
@@ -43,7 +44,7 @@ export const generateControllerModule = (controller: ControllerDefinition) => {
   const methods = controller.methods.map(generateMethod).join('\n\n');
 
   return [
-    "import 'virtual:nestbridge/config';",
+    `import '${CONFIG_VIRTUAL_MODULE_ID}';`,
     "import { request } from 'nestbridge';",
     '',
     `export class ${controller.name} {`,

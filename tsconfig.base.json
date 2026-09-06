@@ -23,9 +23,12 @@
     "paths": {
       "@nestbridge/core": ["./packages/core/src/index.ts"],
       "@nestbridge/runtime": ["./packages/runtime/src/index.ts"],
-      "@nestbridge/vite": ["./packages/vite/src/index.ts"],
+      "@nestbridge/unplugin": ["./packages/unplugin/src/main.ts"],
+      "@nestbridge/vite": ["./packages/vite/src/main.ts"],
+      "@nestbridge/webpack": ["./packages/webpack/src/main.ts"],
       "nestbridge": ["./packages/nestbridge/src/index.ts"],
-      "nestbridge/vite": ["./packages/nestbridge/src/vite.ts"]
+      "nestbridge/vite": ["./packages/nestbridge/src/vite.ts"],
+      "nestbridge/webpack": ["./packages/nestbridge/src/webpack.ts"]
     }
   }
 }

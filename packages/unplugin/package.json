@@ -1,19 +1,19 @@
 {
-  "name": "@nestbridge/vite",
-  "version": "2.0.0",
+  "name": "@nestbridge/unplugin",
+  "version": "1.1.1",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MDReal32/nestbridge.git",
-    "directory": "packages/vite"
+    "directory": "packages/unplugin"
   },
-  "main": "./build/nestbridge.vite.js",
-  "types": "./build/nestbridge.vite.d.ts",
+  "main": "./build/nestbridge.unplugin.js",
+  "types": "./build/nestbridge.unplugin.d.ts",
   "exports": {
     ".": {
-      "types": "./build/nestbridge.vite.d.ts",
-      "import": "./build/nestbridge.vite.js"
+      "types": "./build/nestbridge.unplugin.d.ts",
+      "import": "./build/nestbridge.unplugin.js"
     }
   },
   "files": [
@@ -26,7 +26,8 @@
     "lint": "biome check ."
   },
   "dependencies": {
-    "@nestbridge/unplugin": "workspace:*"
+    "@nestbridge/core": "workspace:*",
+    "unplugin": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
@@ -34,8 +35,5 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"
-  },
-  "peerDependencies": {
-    "vite": "^8.2.2"
   }
 }

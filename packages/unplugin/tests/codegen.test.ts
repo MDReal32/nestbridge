@@ -1,6 +1,7 @@
 import type { ControllerMethodDefinition } from '@nestbridge/core';
 import { describe, expect, it } from 'vitest';
 import { generateControllerModule } from '../src/codegen';
+import { CONFIG_VIRTUAL_MODULE_ID } from '../src/virtual-modules';
 
 const method = (overrides: Partial<ControllerMethodDefinition>): ControllerMethodDefinition => ({
   name: 'findOne',
@@ -32,7 +33,7 @@ describe('generateControllerModule', () => {
   it('imports the config virtual module so the resolved baseURL is applied', () => {
     const code = generateControllerModule(controller([]));
 
-    expect(code).toContain("import 'virtual:nestbridge/config';");
+    expect(code).toContain(`import '${CONFIG_VIRTUAL_MODULE_ID}';`);
   });
 
   it('interpolates a named @Param into the request path', () => {

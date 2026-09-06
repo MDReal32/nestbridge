@@ -1,31 +1,44 @@
 import { readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { build, type Rollup } from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
+import webpack, { type Stats } from 'webpack';
 import { nestBridge } from '../src/main';
 
 const fixturesRoot = resolve(import.meta.dirname, 'fixtures');
 const clientRoot = resolve(fixturesRoot, 'client');
+const outputRoot = resolve(clientRoot, 'dist');
 
 const runBuild = async () => {
-  const result = await build({
-    root: clientRoot,
-    logLevel: 'silent',
-    configFile: false,
-    build: {
-      write: false,
-      minify: false,
-      lib: {
-        entry: resolve(clientRoot, 'main.ts'),
-        formats: ['es'],
-        fileName: () => 'bundle.js',
-      },
-      rollupOptions: {
-        external: ['nestbridge'],
-      },
+  const compiler = webpack({
+    mode: 'development',
+    devtool: false,
+    context: clientRoot,
+    entry: resolve(clientRoot, 'main.ts'),
+    target: 'node',
+    output: {
+      path: outputRoot,
+      filename: 'bundle.js',
+      library: { type: 'commonjs2' },
+    },
+    resolve: {
+      extensions: ['.ts', '.js'],
+    },
+    externalsType: 'commonjs2',
+    externals: {
+      nestbridge: 'nestbridge',
+    },
+    module: {
+      rules: [
+        {
+          test: /\.ts$/,
+          loader: 'esbuild-loader',
+          options: { target: 'esnext' },
+        },
+      ],
     },
     plugins: [
       nestBridge({
+        root: clientRoot,
         controllers: '../server/**/*.controller.ts',
         resolvers: '../server/**/*.resolver.ts',
         baseURL: '/api',
@@ -33,32 +46,46 @@ const runBuild = async () => {
     ],
   });
 
-  const output = (Array.isArray(result) ? result[0] : result) as Rollup.RollupOutput;
-  const chunk = output.output.find((item): item is Rollup.OutputChunk => item.type === 'chunk');
+  const stats = await new Promise<Stats>((resolvePromise, rejectPromise) => {
+    compiler.run((error, result) => {
+      if (error) {
+        rejectPromise(error);
+        return;
+      }
 
-  if (chunk === undefined) {
-    throw new Error('Expected the build to produce a JS chunk.');
+      if (result === undefined) {
+        rejectPromise(new Error('Expected webpack to produce stats.'));
+        return;
+      }
+
+      compiler.close(() => resolvePromise(result));
+    });
+  });
+
+  if (stats.hasErrors()) {
+    throw new Error(stats.toString({ colors: false }));
   }
 
-  return chunk.code;
+  return readFileSync(resolve(outputRoot, 'bundle.js'), 'utf-8');
 };
 
 afterEach(() => {
   rmSync(resolve(clientRoot, '.nestbridge'), { recursive: true, force: true });
+  rmSync(outputRoot, { recursive: true, force: true });
 });
 
-describe('nestBridge vite plugin', () => {
+describe('nestBridge webpack plugin', () => {
   it('intercepts the direct controller import and replaces it with a generated module', async () => {
     const code = await runBuild();
 
-    expect(code).toMatch(/from ['"]nestbridge['"]/);
-    expect(code).toContain('WidgetsController = class');
+    expect(code).toMatch(/require\(["']nestbridge["']\)/);
+    expect(code).toContain('class WidgetsController');
   });
 
   it('configures nestbridge with the plugin baseURL option', async () => {
     const code = await runBuild();
 
-    expect(code).toContain('setNestBridgeBaseURL("/api")');
+    expect(code).toMatch(/setNestBridgeBaseURL\)?\("\/api"\)/);
   });
 
   it('excludes the real controller implementation and NestJS dependencies from the bundle', async () => {
@@ -85,8 +112,8 @@ describe('nestBridge vite plugin', () => {
   it('intercepts the direct resolver import and replaces it with a generated module', async () => {
     const code = await runBuild();
 
-    expect(code).toMatch(/from ['"]nestbridge['"]/);
-    expect(code).toContain('UsersResolver = class');
+    expect(code).toMatch(/require\(["']nestbridge["']\)/);
+    expect(code).toContain('class UsersResolver');
     expect(code).toContain('graphqlRequest');
   });
 
