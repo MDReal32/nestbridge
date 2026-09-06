@@ -1,5 +1,6 @@
 # @nestbridge/vite
 
+[![Release](https://github.com/MDReal32/nestbridge/actions/workflows/release.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/release.yml)
 [![CI](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MDReal32/nestbridge/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@nestbridge/vite.svg)](https://www.npmjs.com/package/@nestbridge/vite)
 
