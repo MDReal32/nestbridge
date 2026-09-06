@@ -228,7 +228,7 @@ which reads its configuration from a single global set by
 at the top of your app's entry point:
 
 ```ts
-import { configureNestBridge } from '@nestbridge/runtime';
+import { configureNestBridge } from 'nestbridge';
 
 configureNestBridge({
   baseURL: '/api',
@@ -396,7 +396,7 @@ which is exactly what a generated declaration looks like on disk:
 ```ts
 // .nestbridge/server/src/users/users.controller.d.ts
 import type { UsersController as __ServerUsersController } from '../../server/src/users/users.controller';
-import type { RemoteResult } from '@nestbridge/runtime';
+import type { RemoteResult } from 'nestbridge';
 
 export declare class UsersController {
   constructor();

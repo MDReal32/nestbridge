@@ -43,7 +43,7 @@ export const generateControllerModule = (controller: ControllerDefinition) => {
   const methods = controller.methods.map(generateMethod).join('\n\n');
 
   return [
-    "import { request } from '@nestbridge/runtime';",
+    "import { request } from 'nestbridge';",
     '',
     `export class ${controller.name} {`,
     '  constructor() {}',

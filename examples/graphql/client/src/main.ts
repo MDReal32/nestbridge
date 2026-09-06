@@ -1,5 +1,5 @@
-import { configureNestBridge } from '@nestbridge/runtime';
 import { BooksResolver } from '@server/books/books.resolver';
+import { configureNestBridge } from 'nestbridge';
 
 configureNestBridge({ baseURL: '/api' });
 

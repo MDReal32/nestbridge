@@ -41,7 +41,7 @@ export const generateResolverModule = (resolver: ResolverDefinition) => {
   const methods = resolver.methods.map(generateMethod).join('\n\n');
 
   return [
-    "import { graphqlRequest } from '@nestbridge/runtime';",
+    "import { graphqlRequest } from 'nestbridge';",
     '',
     `export class ${resolver.name} {`,
     '  constructor() {}',

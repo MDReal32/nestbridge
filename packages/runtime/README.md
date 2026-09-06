@@ -19,7 +19,7 @@ yarn add @nestbridge/runtime
 ## Configure once
 
 ```ts
-import { configureNestBridge } from '@nestbridge/runtime';
+import { configureNestBridge } from 'nestbridge';
 
 configureNestBridge({
   baseURL: '/api',

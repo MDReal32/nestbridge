@@ -24,7 +24,7 @@ describe('generateControllerModule', () => {
   it('imports request from @nestbridge/runtime and defines a zero-argument constructor', () => {
     const code = generateControllerModule(controller([]));
 
-    expect(code).toContain("import { request } from '@nestbridge/runtime';");
+    expect(code).toContain("import { request } from 'nestbridge';");
     expect(code).toContain('export class UsersController {');
     expect(code).toContain('constructor() {}');
   });

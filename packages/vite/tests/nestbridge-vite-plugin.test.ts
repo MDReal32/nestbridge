@@ -21,7 +21,7 @@ const runBuild = async () => {
         fileName: () => 'bundle.js',
       },
       rollupOptions: {
-        external: ['@nestbridge/runtime'],
+        external: ['nestbridge'],
       },
     },
     plugins: [
@@ -51,7 +51,7 @@ describe('nestBridge vite plugin', () => {
   it('intercepts the direct controller import and replaces it with a generated module', async () => {
     const code = await runBuild();
 
-    expect(code).toMatch(/from ['"]@nestbridge\/runtime['"]/);
+    expect(code).toMatch(/from ['"]nestbridge['"]/);
     expect(code).toContain('class WidgetsController');
   });
 
@@ -79,7 +79,7 @@ describe('nestBridge vite plugin', () => {
   it('intercepts the direct resolver import and replaces it with a generated module', async () => {
     const code = await runBuild();
 
-    expect(code).toMatch(/from ['"]@nestbridge\/runtime['"]/);
+    expect(code).toMatch(/from ['"]nestbridge['"]/);
     expect(code).toContain('class UsersResolver');
     expect(code).toContain('graphqlRequest');
   });

@@ -60,7 +60,7 @@ describe('generateControllerDeclaration', () => {
       fixture('generated/widgets.controller.d.ts'),
     );
 
-    expect(declaration).toContain("import type { RemoteResult } from '@nestbridge/runtime';");
+    expect(declaration).toContain("import type { RemoteResult } from 'nestbridge';");
   });
 
   it('imports the real controller type relative to the declaration output path', () => {
@@ -128,7 +128,7 @@ describe('generateControllerDeclaration', () => {
     );
 
     expect(declaration).toContain(
-      "import type { RemoteObservableResult, RemoteResult, RemoteStreamResult } from '@nestbridge/runtime';",
+      "import type { RemoteObservableResult, RemoteResult, RemoteStreamResult } from 'nestbridge';",
     );
   });
 });

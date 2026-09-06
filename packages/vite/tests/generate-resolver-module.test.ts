@@ -23,7 +23,7 @@ describe('generateResolverModule', () => {
   it('imports graphqlRequest from @nestbridge/runtime and defines a zero-argument constructor', () => {
     const code = generateResolverModule(resolver([]));
 
-    expect(code).toContain("import { graphqlRequest } from '@nestbridge/runtime';");
+    expect(code).toContain("import { graphqlRequest } from 'nestbridge';");
     expect(code).toContain('export class UsersResolver {');
     expect(code).toContain('constructor() {}');
   });
