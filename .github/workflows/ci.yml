@@ -44,14 +44,5 @@ jobs:
         with:
           main-branch-name: master
 
-      - name: Lint affected
-        run: yarn nx affected -t lint
-
-      - name: Typecheck affected
-        run: yarn nx affected -t typecheck
-
-      - name: Test affected
-        run: yarn nx affected -t test
-
-      - name: Build affected
+      - name: Build affected (lint, typecheck, test, build)
         run: yarn nx affected -t build

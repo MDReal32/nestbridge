@@ -73,16 +73,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Lint
-        run: yarn nx run-many -t lint
-
-      - name: Typecheck
-        run: yarn nx run-many -t typecheck
-
-      - name: Test
-        run: yarn nx run-many -t test
-
-      - name: Build publishable packages
+      - name: Build publishable packages (lint, typecheck, test, build)
         run: yarn nx run-many -t build --projects=core,runtime,vite,nestbridge
 
       - name: Verify build artifacts
