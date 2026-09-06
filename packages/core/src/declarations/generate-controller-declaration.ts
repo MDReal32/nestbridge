@@ -36,7 +36,7 @@ const stripExtension = (filePath: string) => {
 export const generateControllerDeclaration = (
   controller: ClientDeclarationSource,
   outputFilePath: string,
-) => {
+): string => {
   const sourceFileSpecifier = importSpecifierFor(controller.sourceFile, outputFilePath);
   const importSpecifier = stripExtension(sourceFileSpecifier);
   const serverAlias = `__Server${controller.name}`;

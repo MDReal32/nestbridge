@@ -4,7 +4,7 @@ export const resolveRequestHeaders = async (
   config: NestBridgeConfig,
   requestHeaders: Record<string, string | undefined> | undefined,
   hasBody: boolean,
-) => {
+): Promise<Record<string, string>> => {
   const globalHeaders =
     typeof config.headers === 'function' ? await config.headers() : (config.headers ?? {});
   const merged: Record<string, string> = { ...globalHeaders };

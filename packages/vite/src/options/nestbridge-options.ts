@@ -14,7 +14,9 @@ export interface ResolvedNestBridgeOptions {
   outputDir: string;
 }
 
-export const resolveNestBridgeOptions = (options: NestBridgeOptions) => ({
+export const resolveNestBridgeOptions = (
+  options: NestBridgeOptions,
+): ResolvedNestBridgeOptions => ({
   controllers: Array.isArray(options.controllers) ? options.controllers : [options.controllers],
   resolvers:
     options.resolvers === undefined

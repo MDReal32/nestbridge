@@ -2,7 +2,7 @@ import type { NestBridgeConfig } from '../config';
 
 const isAbsoluteUrl = (value: string) => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 
-export const resolveGraphqlEndpoint = (config: NestBridgeConfig) => {
+export const resolveGraphqlEndpoint = (config: NestBridgeConfig): string => {
   const endpoint = config.graphqlEndpoint ?? `${config.baseURL ?? ''}/graphql`;
 
   if (isAbsoluteUrl(endpoint) || typeof globalThis.location === 'undefined') {

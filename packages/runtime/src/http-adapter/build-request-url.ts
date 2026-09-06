@@ -23,7 +23,7 @@ export const buildRequestUrl = (
   baseURL: string | undefined,
   path: string,
   query: Record<string, unknown> | undefined,
-) => {
+): string => {
   const url = `${baseURL ?? ''}${path}`;
 
   if (query === undefined) {

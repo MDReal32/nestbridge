@@ -6,7 +6,7 @@ import type { NestBridgeRequest } from './nestbridge-request';
 import { parseResponseBody } from './parse-response-body';
 import { resolveRequestHeaders } from './resolve-request-headers';
 
-export const request = async <T>(nestBridgeRequest: NestBridgeRequest) => {
+export const request = async <T>(nestBridgeRequest: NestBridgeRequest): Promise<T> => {
   const config = getNestBridgeConfig();
   const fetchImplementation = config.fetch ?? globalThis.fetch;
   const hasBody = nestBridgeRequest.body !== undefined;

@@ -1,6 +1,6 @@
 import type { NestBridgeDiagnostic } from './nestbridge-diagnostic';
 
-export const formatDiagnostic = (diagnostic: NestBridgeDiagnostic) => {
+export const formatDiagnostic = (diagnostic: NestBridgeDiagnostic): string => {
   const subject =
     diagnostic.memberName.length > 0
       ? `${diagnostic.controllerName}.${diagnostic.memberName}`
