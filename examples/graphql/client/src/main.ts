@@ -1,7 +1,4 @@
 import { BooksResolver } from '@server/books/books.resolver';
-import { configureNestBridge } from 'nestbridge';
-
-configureNestBridge({ baseURL: '/api' });
 
 const booksResolver = new BooksResolver();
 

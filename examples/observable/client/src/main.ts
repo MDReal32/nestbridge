@@ -1,7 +1,4 @@
 import { EventsController } from '@server/events/events.controller';
-import { configureNestBridge } from 'nestbridge';
-
-configureNestBridge({ baseURL: '/api' });
 
 const events = new EventsController();
 

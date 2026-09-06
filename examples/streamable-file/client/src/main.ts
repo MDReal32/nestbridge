@@ -1,7 +1,4 @@
 import { FilesController } from '@server/files/files.controller';
-import { configureNestBridge } from 'nestbridge';
-
-configureNestBridge({ baseURL: '/api' });
 
 const files = new FilesController();
 

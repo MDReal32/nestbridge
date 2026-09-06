@@ -1,4 +1,4 @@
-import { getNestBridgeConfig } from '../config';
+import { getNestBridgeBaseURL, getNestBridgeConfig } from '../config';
 import { buildRequestUrl } from './build-request-url';
 import { extractErrorMessage } from './extract-error-message';
 import { NestBridgeError } from './nestbridge-error';
@@ -10,7 +10,11 @@ export const request = async <T>(nestBridgeRequest: NestBridgeRequest): Promise<
   const config = getNestBridgeConfig();
   const fetchImplementation = config.fetch ?? globalThis.fetch;
   const hasBody = nestBridgeRequest.body !== undefined;
-  const url = buildRequestUrl(config.baseURL, nestBridgeRequest.path, nestBridgeRequest.query);
+  const url = buildRequestUrl(
+    getNestBridgeBaseURL(),
+    nestBridgeRequest.path,
+    nestBridgeRequest.query,
+  );
   const headers = await resolveRequestHeaders(config, nestBridgeRequest.headers, hasBody);
 
   const response = await fetchImplementation(url, {

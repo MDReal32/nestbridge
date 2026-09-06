@@ -29,6 +29,12 @@ describe('generateControllerModule', () => {
     expect(code).toContain('constructor() {}');
   });
 
+  it('imports the config virtual module so the resolved baseURL is applied', () => {
+    const code = generateControllerModule(controller([]));
+
+    expect(code).toContain("import 'virtual:nestbridge/config';");
+  });
+
   it('interpolates a named @Param into the request path', () => {
     const code = generateControllerModule(
       controller([

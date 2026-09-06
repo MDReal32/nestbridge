@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { configureNestBridge } from '../src/config';
+import { configureNestBridge, setNestBridgeBaseURL } from '../src/config';
 import { graphqlRequest, NestBridgeGraphqlError } from '../src/graphql-adapter';
 
 const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
@@ -11,6 +11,7 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
 
 beforeEach(() => {
   configureNestBridge({});
+  setNestBridgeBaseURL(undefined);
 });
 
 afterEach(() => {
@@ -20,7 +21,8 @@ afterEach(() => {
 describe('graphqlRequest', () => {
   it('sends the document and variables to baseURL + /graphql by default', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: { user: { id: '1' } } }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     await graphqlRequest({ document: 'query { user { id } }', variables: { id: '1' } });
 
@@ -34,8 +36,8 @@ describe('graphqlRequest', () => {
 
   it('uses a configured graphqlEndpoint instead of baseURL + /graphql', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
+    setNestBridgeBaseURL('https://api.example.com');
     configureNestBridge({
-      baseURL: 'https://api.example.com',
       graphqlEndpoint: 'https://api.example.com/gql',
       fetch: fetchMock,
     });
@@ -48,7 +50,8 @@ describe('graphqlRequest', () => {
 
   it('resolves to the data returned by the server', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: { user: { id: '1' } } }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     const result = await graphqlRequest<{ user: { id: string } }>({
       document: 'query { user { id } }',
@@ -59,8 +62,8 @@ describe('graphqlRequest', () => {
 
   it('applies configured headers to the request', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
+    setNestBridgeBaseURL('https://api.example.com');
     configureNestBridge({
-      baseURL: 'https://api.example.com',
       headers: { authorization: 'Bearer token' },
       fetch: fetchMock,
     });
@@ -76,7 +79,8 @@ describe('graphqlRequest', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ errors: [{ message: 'Not Found' }] }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     await expect(graphqlRequest({ document: 'query { missing }' })).rejects.toBeInstanceOf(
       NestBridgeGraphqlError,
@@ -87,7 +91,8 @@ describe('graphqlRequest', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ errors: [{ message: 'Not Found' }] }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     const error = await graphqlRequest({ document: 'query { missing }' }).catch(
       (caught: unknown) => caught,
@@ -102,7 +107,8 @@ describe('graphqlRequest', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ errors: [{ message: 'Not Found' }] }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     const error = await graphqlRequest({ document: 'query { missing }' }).catch(
       (caught: unknown) => caught,
@@ -125,7 +131,8 @@ describe('graphqlRequest', () => {
 
   it('uses a custom fetch implementation when configured', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: {} }));
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
+    setNestBridgeBaseURL('https://api.example.com');
+    configureNestBridge({ fetch: fetchMock });
 
     await graphqlRequest({ document: 'query { ping }' });
 

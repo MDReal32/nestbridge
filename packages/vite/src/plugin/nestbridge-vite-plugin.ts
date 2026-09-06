@@ -1,16 +1,18 @@
 import { formatDiagnostic, type NestBridgeDiagnostic } from '@nestbridge/core';
 import { normalizePath, type Plugin, type ResolvedConfig } from 'vite';
-import { generateControllerModule, generateResolverModule } from '../codegen';
+import { generateConfigModule, generateControllerModule, generateResolverModule } from '../codegen';
 import { writeControllerDeclarations, writeResolverDeclarations } from '../declarations';
 import { discoverFiles } from '../discovery';
 import { type NestBridgeOptions, resolveNestBridgeOptions } from '../options';
 import {
+  CONFIG_VIRTUAL_MODULE_ID,
   decodeControllerVirtualId,
   decodeResolverVirtualId,
   encodeControllerVirtualId,
   encodeResolverVirtualId,
   isResolvedControllerVirtualId,
   isResolvedResolverVirtualId,
+  RESOLVED_CONFIG_VIRTUAL_MODULE_ID,
   resolvedControllerVirtualId,
   resolvedResolverVirtualId,
 } from '../virtual-modules';
@@ -85,6 +87,10 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
     },
 
     async resolveId(source, importer, resolveOptions) {
+      if (source === CONFIG_VIRTUAL_MODULE_ID) {
+        return RESOLVED_CONFIG_VIRTUAL_MODULE_ID;
+      }
+
       if (importer === undefined) {
         return null;
       }
@@ -109,6 +115,10 @@ export const nestBridge = (options: NestBridgeOptions): Plugin => {
     },
 
     load(id) {
+      if (id === RESOLVED_CONFIG_VIRTUAL_MODULE_ID) {
+        return generateConfigModule(resolvedOptions);
+      }
+
       if (isResolvedControllerVirtualId(id)) {
         const controller = controllerRegistry.get(decodeControllerVirtualId(id));
         return controller === undefined ? null : generateControllerModule(controller);

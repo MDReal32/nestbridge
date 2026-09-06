@@ -8,20 +8,11 @@ export default defineConfig({
       '@server': resolve(import.meta.dirname, '../server/src'),
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
-  },
   plugins: [
     nestBridge({
       controllers: '../server/src/**/*.controller.ts',
       resolvers: '../server/src/**/*.resolver.ts',
-      baseURL: '/api',
+      baseURL: 'http://localhost:3500',
     }),
   ],
   test: {

@@ -41,6 +41,7 @@ export const generateResolverModule = (resolver: ResolverDefinition) => {
   const methods = resolver.methods.map(generateMethod).join('\n\n');
 
   return [
+    "import 'virtual:nestbridge/config';",
     "import { graphqlRequest } from 'nestbridge';",
     '',
     `export class ${resolver.name} {`,

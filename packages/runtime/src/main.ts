@@ -1,5 +1,5 @@
 export type { NestBridgeConfig } from './config';
-export { configureNestBridge } from './config';
+export { configureNestBridge, setNestBridgeBaseURL } from './config';
 export type { NestBridgeGraphqlRequest } from './graphql-adapter';
 export { graphqlRequest, NestBridgeGraphqlError } from './graphql-adapter';
 export type { NestBridgeRequest } from './http-adapter';

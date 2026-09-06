@@ -51,14 +51,4 @@ describe('configureNestBridge', () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.headers).toMatchObject({ authorization: 'Bearer token' });
   });
-
-  it('prefixes every request path with baseURL', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(okResponse());
-    configureNestBridge({ baseURL: 'https://api.example.com', fetch: fetchMock });
-
-    await request({ method: 'GET', path: '/users' });
-
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://api.example.com/users');
-  });
 });

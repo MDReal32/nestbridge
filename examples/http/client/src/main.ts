@@ -1,7 +1,4 @@
 import { ItemsController } from '@server/items/items.controller';
-import { configureNestBridge } from 'nestbridge';
-
-configureNestBridge({ baseURL: '/api' });
 
 const items = new ItemsController();
 

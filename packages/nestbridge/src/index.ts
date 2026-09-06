@@ -11,4 +11,5 @@ export {
   NestBridgeError,
   NestBridgeGraphqlError,
   request,
+  setNestBridgeBaseURL,
 } from '@nestbridge/runtime';

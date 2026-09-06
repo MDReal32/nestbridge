@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { configureNestBridge } from '../src/config';
+import { configureNestBridge, setNestBridgeBaseURL } from '../src/config';
 import { NestBridgeError, request } from '../src/http-adapter';
 
 const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
@@ -11,12 +11,14 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
 
 beforeEach(() => {
   configureNestBridge({});
+  setNestBridgeBaseURL(undefined);
 });
 
 describe('request', () => {
   it('performs a GET request against baseURL + path', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: '1' }));
-    configureNestBridge({ baseURL: '/api', fetch: fetchMock });
+    setNestBridgeBaseURL('/api');
+    configureNestBridge({ fetch: fetchMock });
 
     const result = await request<{ id: string }>({ method: 'GET', path: '/users/1' });
 

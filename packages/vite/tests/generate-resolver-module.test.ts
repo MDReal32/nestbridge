@@ -28,6 +28,12 @@ describe('generateResolverModule', () => {
     expect(code).toContain('constructor() {}');
   });
 
+  it('imports the config virtual module so the resolved baseURL is applied', () => {
+    const code = generateResolverModule(resolver([]));
+
+    expect(code).toContain("import 'virtual:nestbridge/config';");
+  });
+
   it('builds a document with variables and field arguments for a query with args', () => {
     const code = generateResolverModule(
       resolver([

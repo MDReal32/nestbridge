@@ -55,6 +55,12 @@ describe('nestBridge vite plugin', () => {
     expect(code).toContain('WidgetsController = class');
   });
 
+  it('configures nestbridge with the plugin baseURL option', async () => {
+    const code = await runBuild();
+
+    expect(code).toContain('setNestBridgeBaseURL("/api")');
+  });
+
   it('excludes the real controller implementation and NestJS dependencies from the bundle', async () => {
     const code = await runBuild();
 

@@ -43,6 +43,7 @@ export const generateControllerModule = (controller: ControllerDefinition) => {
   const methods = controller.methods.map(generateMethod).join('\n\n');
 
   return [
+    "import 'virtual:nestbridge/config';",
     "import { request } from 'nestbridge';",
     '',
     `export class ${controller.name} {`,

@@ -1,5 +1,4 @@
 export interface NestBridgeConfig {
-  baseURL?: string;
   graphqlEndpoint?: string;
   headers?:
     | Record<string, string>
