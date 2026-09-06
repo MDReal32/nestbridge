@@ -48,7 +48,7 @@ jobs:
         if: steps.status.outputs.has-changesets == 'true'
         uses: changesets/action@v1
         with:
-          version: yarn version
+          version: yarn run version
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
