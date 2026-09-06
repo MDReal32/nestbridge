@@ -21,7 +21,7 @@ const moduleNameFromPackageName = (packageName: string) =>
   packageName.replace(/^@nestbridge\//, '');
 
 const dtsPlugins = (tsconfigPath: string) =>
-  dts({ tsconfig: tsconfigPath, generator: 'oxc' }).map(plugin =>
+  dts({ tsconfig: tsconfigPath, generator: 'oxc' }).map((plugin) =>
     plugin.name.endsWith('fake-js') ? { ...plugin, enforce: 'pre' as const } : plugin,
   );
 
