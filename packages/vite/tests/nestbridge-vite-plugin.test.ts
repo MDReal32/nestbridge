@@ -52,7 +52,7 @@ describe('nestBridge vite plugin', () => {
     const code = await runBuild();
 
     expect(code).toMatch(/from ['"]nestbridge['"]/);
-    expect(code).toContain('class WidgetsController');
+    expect(code).toContain('WidgetsController = class');
   });
 
   it('excludes the real controller implementation and NestJS dependencies from the bundle', async () => {
@@ -80,7 +80,7 @@ describe('nestBridge vite plugin', () => {
     const code = await runBuild();
 
     expect(code).toMatch(/from ['"]nestbridge['"]/);
-    expect(code).toContain('class UsersResolver');
+    expect(code).toContain('UsersResolver = class');
     expect(code).toContain('graphqlRequest');
   });
 
