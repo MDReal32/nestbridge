@@ -1,5 +1,14 @@
 # nestbridge
 
+## 2.0.4
+
+### Patch Changes
+
+- ae14e27: Fix the release workflow's build-artifact hand-off so published packages actually include their `build` directory. Previous releases (up to 2.0.3) were published with an empty `build` folder due to a path-stripping bug in the CI upload/download steps.
+- @nestbridge/runtime@2.0.4
+  - @nestbridge/vite@2.0.4
+  - @nestbridge/webpack@2.0.4
+
 ## 2.0.0
 
 ### Major Changes
