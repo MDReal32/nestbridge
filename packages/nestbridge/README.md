@@ -247,10 +247,10 @@ instead:
 }
 ```
 
-NestBridge mirrors each controller's path under `<root>/.nestbridge/`,
-relative to your Vite project root, stripping any leading `../` segments. For
-a controller glob of `../server/src/**/*.controller.ts` resolved from a
-client at `examples/http/client`, `items.controller.ts` ends up at
+NestBridge mirrors each controller's path under `outputDir`, relative to
+`root`, stripping any leading `../` segments. For a controller glob of
+`../server/src/**/*.controller.ts` resolved from a client at
+`examples/http/client`, `items.controller.ts` ends up at
 `.nestbridge/server/src/items/items.controller.d.ts` — hence the `paths`
 entry above. Add `.nestbridge/` to your `.gitignore`; it's generated on every
 build and on every dev-server start.
@@ -259,11 +259,12 @@ build and on every dev-server start.
 
 ```ts
 interface NestBridgeOptions {
-  controllers: string | string[]; // glob(s), resolved relative to the Vite root
+  controllers: string | string[]; // glob(s), resolved relative to `root`
   resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
   baseURL?: string;                // informational; call configureNestBridge for the runtime effect
   debug?: boolean;                 // logs discovery/analysis/HMR activity
-  outputDir?: string;               // defaults to ".nestbridge"
+  outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context) — independent of `root`
+  root?: string;                    // base directory for discovering controllers/resolvers and the bootstrap file; defaults to the bundler's own root
 }
 ```
 

@@ -4,15 +4,14 @@ import { type ErrorResponseShapeDetection, generateErrorBodyDeclaration } from '
 
 export const ERROR_BODY_DECLARATION_FILE_NAME = 'nestbridge-error-body.d.ts';
 
-export const errorBodyDeclarationPath = (root: string, outputDir: string) =>
-  join(root, outputDir, ERROR_BODY_DECLARATION_FILE_NAME);
+export const errorBodyDeclarationPath = (resolvedOutputDir: string) =>
+  join(resolvedOutputDir, ERROR_BODY_DECLARATION_FILE_NAME);
 
 export const writeErrorBodyDeclaration = (
-  root: string,
-  outputDir: string,
+  resolvedOutputDir: string,
   errorResponseShape?: ErrorResponseShapeDetection,
 ) => {
-  const outputFilePath = errorBodyDeclarationPath(root, outputDir);
+  const outputFilePath = errorBodyDeclarationPath(resolvedOutputDir);
 
   if (errorResponseShape === undefined) {
     rmSync(outputFilePath, { force: true });

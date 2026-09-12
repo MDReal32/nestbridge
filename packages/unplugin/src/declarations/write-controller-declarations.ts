@@ -9,12 +9,16 @@ import { mirroredDeclarationPath } from './mirror-declaration-path';
 
 export const writeControllerDeclarations = (
   controllers: readonly ControllerDefinition[],
-  root: string,
-  outputDir: string,
+  sourceRoot: string,
+  resolvedOutputDir: string,
   responseWrapper?: ResponseWrapperDetection,
 ) => {
   for (const controller of controllers) {
-    const outputFilePath = mirroredDeclarationPath(root, outputDir, controller.sourceFile);
+    const outputFilePath = mirroredDeclarationPath(
+      sourceRoot,
+      resolvedOutputDir,
+      controller.sourceFile,
+    );
     mkdirSync(dirname(outputFilePath), { recursive: true });
     writeFileSync(
       outputFilePath,

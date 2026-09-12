@@ -3,9 +3,7 @@ import { discoverFiles } from './discover-files';
 
 const BOOTSTRAP_FILE_PATTERN = '**/main.ts';
 
-export const discoverBootstrapFile = (root: string, outputDir: string) => {
-  const resolvedOutputDir = resolve(root, outputDir);
-
+export const discoverBootstrapFile = (root: string, resolvedOutputDir: string) => {
   const isExcluded = (filePath: string) => {
     if (filePath.split(/[\\/]/).includes('node_modules')) {
       return true;

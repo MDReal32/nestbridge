@@ -36,7 +36,7 @@ describe('writeResolverDeclarations', () => {
   };
 
   it('writes a declaration file mirroring the resolver path under the output directory', () => {
-    writeResolverDeclarations([resolver], fixturesRoot, outputDir);
+    writeResolverDeclarations([resolver], fixturesRoot, resolve(fixturesRoot, outputDir));
 
     const outputFilePath = resolve(fixturesRoot, outputDir, 'server/user.resolver.d.ts');
     expect(existsSync(outputFilePath)).toBe(true);
@@ -44,7 +44,7 @@ describe('writeResolverDeclarations', () => {
   });
 
   it('writes a zero-argument constructor, excluding server-only implementation details', () => {
-    writeResolverDeclarations([resolver], fixturesRoot, outputDir);
+    writeResolverDeclarations([resolver], fixturesRoot, resolve(fixturesRoot, outputDir));
 
     const declaration = readFileSync(
       resolve(fixturesRoot, outputDir, 'server/user.resolver.d.ts'),

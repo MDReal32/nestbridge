@@ -16,7 +16,7 @@ describe('mirroredDeclarationPath', () => {
     const controllerFile = resolve(fixturesRoot, 'server/widgets.controller.ts');
     const outputFilePath = mirroredDeclarationPath(
       resolve(fixturesRoot, 'client'),
-      '.nestbridge',
+      resolve(fixturesRoot, 'client', '.nestbridge'),
       controllerFile,
     );
 
@@ -52,7 +52,7 @@ describe('writeControllerDeclarations', () => {
   };
 
   it('writes a declaration file mirroring the controller path under the output directory', () => {
-    writeControllerDeclarations([controller], fixturesRoot, outputDir);
+    writeControllerDeclarations([controller], fixturesRoot, resolve(fixturesRoot, outputDir));
 
     const outputFilePath = resolve(fixturesRoot, outputDir, 'server/widgets.controller.d.ts');
     expect(existsSync(outputFilePath)).toBe(true);
@@ -62,7 +62,7 @@ describe('writeControllerDeclarations', () => {
   });
 
   it('writes a zero-argument constructor, excluding server-only implementation details', () => {
-    writeControllerDeclarations([controller], fixturesRoot, outputDir);
+    writeControllerDeclarations([controller], fixturesRoot, resolve(fixturesRoot, outputDir));
 
     const declaration = readFileSync(
       resolve(fixturesRoot, outputDir, 'server/widgets.controller.d.ts'),

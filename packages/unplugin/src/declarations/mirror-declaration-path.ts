@@ -7,11 +7,11 @@ const stripLeadingParentSegments = (relativePath: string) => {
 };
 
 export const mirroredDeclarationPath = (
-  root: string,
-  outputDir: string,
+  sourceRoot: string,
+  resolvedOutputDir: string,
   controllerFilePath: string,
 ) => {
-  const relativePath = relative(root, controllerFilePath);
+  const relativePath = relative(sourceRoot, controllerFilePath);
   const mirroredPath = stripLeadingParentSegments(relativePath).replace(/\.ts$/, '.d.ts');
-  return join(root, outputDir, mirroredPath);
+  return join(resolvedOutputDir, mirroredPath);
 };

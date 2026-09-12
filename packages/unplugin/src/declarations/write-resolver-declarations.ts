@@ -5,11 +5,15 @@ import { mirroredDeclarationPath } from './mirror-declaration-path';
 
 export const writeResolverDeclarations = (
   resolvers: readonly ResolverDefinition[],
-  root: string,
-  outputDir: string,
+  sourceRoot: string,
+  resolvedOutputDir: string,
 ) => {
   for (const resolver of resolvers) {
-    const outputFilePath = mirroredDeclarationPath(root, outputDir, resolver.sourceFile);
+    const outputFilePath = mirroredDeclarationPath(
+      sourceRoot,
+      resolvedOutputDir,
+      resolver.sourceFile,
+    );
     mkdirSync(dirname(outputFilePath), { recursive: true });
     writeFileSync(outputFilePath, generateControllerDeclaration(resolver, outputFilePath), 'utf-8');
   }

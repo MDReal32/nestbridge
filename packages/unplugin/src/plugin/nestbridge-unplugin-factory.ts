@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import {
   detectErrorResponseShape,
   detectResponseWrapper,
@@ -40,6 +41,7 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
   const resolvedOptions = resolveNestBridgeOptions(options);
 
   let root = resolvedOptions.root ?? process.cwd();
+  let bundlerRoot = root;
   let controllerRegistry: ReturnType<typeof createControllerRegistry>;
   let resolverRegistry: ReturnType<typeof createResolverRegistry>;
   let bootstrapFilePath: string | undefined;
@@ -56,7 +58,8 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
 
     reportDiagnostics([...controllerDiagnostics, ...resolverDiagnostics], meta.watchMode);
 
-    const discoveredBootstrapFile = discoverBootstrapFile(root, resolvedOptions.outputDir);
+    const resolvedOutputDir = resolve(bundlerRoot, resolvedOptions.outputDir);
+    const discoveredBootstrapFile = discoverBootstrapFile(root, resolvedOutputDir);
     bootstrapFilePath =
       discoveredBootstrapFile !== undefined ? normalizePath(discoveredBootstrapFile) : undefined;
     const responseWrapper =
@@ -68,9 +71,9 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
         ? detectErrorResponseShape(discoveredBootstrapFile)
         : undefined;
 
-    writeControllerDeclarations(controllers, root, resolvedOptions.outputDir, responseWrapper);
-    writeResolverDeclarations(resolvers, root, resolvedOptions.outputDir);
-    writeErrorBodyDeclaration(root, resolvedOptions.outputDir, errorResponseShape);
+    writeControllerDeclarations(controllers, root, resolvedOutputDir, responseWrapper);
+    writeResolverDeclarations(resolvers, root, resolvedOutputDir);
+    writeErrorBodyDeclaration(resolvedOutputDir, errorResponseShape);
     log(
       `analyzed ${controllers.length} controller(s), ${resolvers.length} resolver(s), ` +
         `${controllerDiagnostics.length + resolverDiagnostics.length} diagnostic(s)`,
@@ -125,7 +128,10 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
         controllerRegistry.has(changedFile) ||
         resolverRegistry.has(changedFile) ||
         changedFile === bootstrapFilePath;
-      const discoveredBootstrapFile = discoverBootstrapFile(root, resolvedOptions.outputDir);
+      const discoveredBootstrapFile = discoverBootstrapFile(
+        root,
+        resolve(bundlerRoot, resolvedOptions.outputDir),
+      );
       const isTrackedNow =
         discoverFiles(resolvedOptions.controllers, root).map(normalizePath).includes(changedFile) ||
         discoverFiles(resolvedOptions.resolvers, root).map(normalizePath).includes(changedFile) ||
@@ -145,7 +151,13 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
         if (resolvedOptions.root === undefined) {
           root = config.root;
         }
+
+        bundlerRoot = config.root;
       },
+    },
+
+    webpack(compiler) {
+      bundlerRoot = compiler.options.context ?? bundlerRoot;
     },
   } satisfies UnpluginOptions;
 });

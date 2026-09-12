@@ -12,7 +12,6 @@ export default defineConfig({
     nestBridge({
       root: resolve(import.meta.dirname, '..'),
       controllers: 'server/src/**/*.controller.ts',
-      outputDir: 'client/.nestbridge',
       baseURL: 'http://localhost:3500',
     }),
   ],

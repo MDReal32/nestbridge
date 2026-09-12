@@ -6,16 +6,17 @@ import { errorBodyDeclarationPath, writeErrorBodyDeclaration } from '../src/decl
 
 const fixturesRoot = resolve(import.meta.dirname, 'fixtures');
 const outputDir = '.nestbridge-test-output';
+const resolvedOutputDir = resolve(fixturesRoot, outputDir);
 
 afterEach(() => {
-  rmSync(resolve(fixturesRoot, outputDir), { recursive: true, force: true });
+  rmSync(resolvedOutputDir, { recursive: true, force: true });
 });
 
 describe('errorBodyDeclarationPath', () => {
   it('points at a fixed nestbridge-error-body.d.ts under the output directory', () => {
-    const outputFilePath = errorBodyDeclarationPath(fixturesRoot, outputDir);
+    const outputFilePath = errorBodyDeclarationPath(resolvedOutputDir);
 
-    expect(outputFilePath).toBe(resolve(fixturesRoot, outputDir, 'nestbridge-error-body.d.ts'));
+    expect(outputFilePath).toBe(resolve(resolvedOutputDir, 'nestbridge-error-body.d.ts'));
   });
 });
 
@@ -25,9 +26,9 @@ describe('writeErrorBodyDeclaration', () => {
   };
 
   it('writes a declaration file when an error response shape is detected', () => {
-    writeErrorBodyDeclaration(fixturesRoot, outputDir, errorResponseShape);
+    writeErrorBodyDeclaration(resolvedOutputDir, errorResponseShape);
 
-    const outputFilePath = errorBodyDeclarationPath(fixturesRoot, outputDir);
+    const outputFilePath = errorBodyDeclarationPath(resolvedOutputDir);
     expect(existsSync(outputFilePath)).toBe(true);
     expect(readFileSync(outputFilePath, 'utf-8')).toContain(
       'export type NestBridgeErrorBody = { statusCode: number; message: string };',
@@ -35,17 +36,17 @@ describe('writeErrorBodyDeclaration', () => {
   });
 
   it('does not write a declaration file when no error response shape is detected', () => {
-    writeErrorBodyDeclaration(fixturesRoot, outputDir, undefined);
+    writeErrorBodyDeclaration(resolvedOutputDir, undefined);
 
-    expect(existsSync(errorBodyDeclarationPath(fixturesRoot, outputDir))).toBe(false);
+    expect(existsSync(errorBodyDeclarationPath(resolvedOutputDir))).toBe(false);
   });
 
   it('deletes an existing declaration file once the error response shape is no longer detected', () => {
-    writeErrorBodyDeclaration(fixturesRoot, outputDir, errorResponseShape);
-    const outputFilePath = errorBodyDeclarationPath(fixturesRoot, outputDir);
+    writeErrorBodyDeclaration(resolvedOutputDir, errorResponseShape);
+    const outputFilePath = errorBodyDeclarationPath(resolvedOutputDir);
     expect(existsSync(outputFilePath)).toBe(true);
 
-    writeErrorBodyDeclaration(fixturesRoot, outputDir, undefined);
+    writeErrorBodyDeclaration(resolvedOutputDir, undefined);
 
     expect(existsSync(outputFilePath)).toBe(false);
   });
