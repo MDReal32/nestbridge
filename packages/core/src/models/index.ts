@@ -14,4 +14,5 @@ export type { ResolverArgumentDefinition } from './resolver-argument-definition'
 export type { ResolverDefinition } from './resolver-definition';
 export type { ResolverMethodDefinition } from './resolver-method-definition';
 export type { ResponseKind } from './response-kind';
+export type { ResponseWrapperDetection } from './response-wrapper-detection';
 export type { SelectionField } from './selection-field';

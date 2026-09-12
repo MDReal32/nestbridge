@@ -493,6 +493,54 @@ build the GraphQL selection set baked into the generated request document —
 falling back to a TS return-type annotation only for the legacy
 `@Query('name')` string-only form.
 
+## Auto-detected global response wrapper
+
+If your app registers a global interceptor —
+
+```ts
+// main.ts
+app.useGlobalInterceptors(new ResponseInterceptor());
+```
+
+— whose `intercept()` method reshapes every response through exactly
+
+```ts
+return next.handle().pipe(map((value) => ({ data: value, meta: { requestId: '...' } })));
+```
+
+NestBridge statically detects this shape from the bootstrap file and reflects
+it in the generated client types automatically. No option, import, or config
+is involved — the client's JSON-returning methods resolve to the wrapped
+shape (with the interceptor's payload parameter substituted by
+`Awaited<Result>`) instead of the unwrapped `RemoteResult<T>`:
+
+```ts
+findOne(...args: Parameters<__ServerUsersController['findOne']>): __NestBridgeWrapped<__ServerUsersController['findOne']>;
+```
+
+Multiple global interceptors — registered across separate
+`useGlobalInterceptors()` calls or as multiple arguments to one call — are
+composed in registration order, matching how Nest chains them at runtime:
+the first-registered interceptor wraps the ones registered after it, so its
+shape becomes the outermost type, and the last-registered interceptor's
+shape wraps the raw handler result directly.
+
+`Observable<T>` and streamed responses are never wrapped — the interceptor
+reshaping only applies to standard JSON bodies.
+
+This is a "never guess" analysis: it only recognizes exactly the shape above,
+for every registered interceptor. Anything else — an interceptor class that
+isn't a bare `new X()` argument, a `.pipe()` chain with more than one
+operator, an operator other than `map`, a `map` not imported from `'rxjs'`,
+a callback with zero or more than one parameter, a non-object-literal return
+value, or an object literal that references its payload parameter more than
+once (or not at all) — is silently not detected, and the client falls back
+to the regular unwrapped `RemoteResult<T>`. A single unrecognized interceptor
+anywhere in the chain bails the whole detection, not just that interceptor's
+own contribution. There is no diagnostic for this: it's an app-wide concern,
+not a per-controller-method one, so a failed detection just means the types
+stay unwrapped.
+
 ## Unsupported (by design, for this MVP)
 
 REST controllers:

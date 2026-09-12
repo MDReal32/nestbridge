@@ -1,4 +1,4 @@
-export { analyzeControllers, analyzeResolvers } from './analysis';
+export { analyzeControllers, analyzeResolvers, detectResponseWrapper } from './analysis';
 export { generateControllerDeclaration } from './declarations';
 export type { NestBridgeDiagnostic, NestBridgeDiagnosticCode } from './diagnostics';
 export { formatDiagnostic, NestBridgeDiagnosticError } from './diagnostics';
@@ -15,6 +15,7 @@ export type {
   ResolverDefinition,
   ResolverMethodDefinition,
   ResponseKind,
+  ResponseWrapperDetection,
   SelectionField,
 } from './models';
 export { VERSION } from './version';
