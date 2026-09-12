@@ -1,0 +1,14 @@
+import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { Catch, HttpException } from '@nestjs/common';
+
+@Catch(HttpException)
+export class UnsupportedPropertyExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const response = host.switchToHttp().getResponse();
+
+    response.json({
+      message: exception.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}

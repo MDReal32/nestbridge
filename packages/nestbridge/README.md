@@ -541,6 +541,91 @@ own contribution. There is no diagnostic for this: it's an app-wide concern,
 not a per-controller-method one, so a failed detection just means the types
 stay unwrapped.
 
+## Auto-detected exception filter error body
+
+If your app registers a single global exception filter — either in `main.ts`
+
+```ts
+app.useGlobalFilters(new HttpExceptionFilter());
+```
+
+or as an `APP_FILTER` provider on the root module
+
+```ts
+@Module({
+  providers: [{ provide: APP_FILTER, useClass: HttpExceptionFilter }],
+})
+export class AppModule {}
+```
+
+— decorated with `@Catch(...)`, whose `catch()` method reshapes the error
+through exactly one `.json(...)`/`.send(...)` call with an object literal:
+
+```ts
+@Catch(HttpException)
+class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const response = host.switchToHttp().getResponse();
+
+    response.json({ statusCode: exception.getStatus(), message: exception.message });
+  }
+}
+```
+
+NestBridge statically detects the shape of that response body and writes it
+to a fixed declaration file, `<outputDir>/nestbridge-error-body.d.ts`,
+exporting a `NestBridgeErrorBody` type:
+
+```ts
+// .nestbridge/nestbridge-error-body.d.ts
+export type NestBridgeErrorBody = { statusCode: number; message: string };
+```
+
+Unlike the response wrapper's payload passthrough, an exception filter builds
+its response body from the exception at hand, so NestBridge widens a small
+whitelist of members read off the exception parameter — resolved through any
+number of simple local variable aliases (`const err = exception; const status
+= err.getStatus();`):
+
+- `<exception>.message` → `string`
+- `<exception>.getStatus()`, called with no arguments → `number`
+
+Nested object literals recurse, and string/number/boolean/null literals widen
+to their primitive type, the same way the response wrapper feature handles
+its payload's object literal.
+
+`@nestbridge/runtime` (re-exported from `nestbridge`) exports a matching type
+guard, so a caught error narrows against the generated type:
+
+```ts
+import { isNestBridgeError } from 'nestbridge';
+import type { NestBridgeErrorBody } from '../../.nestbridge/nestbridge-error-body';
+
+try {
+  await users.findOne('123');
+} catch (error) {
+  if (isNestBridgeError<NestBridgeErrorBody>(error)) {
+    console.log(error.body.statusCode, error.body.message);
+  }
+}
+```
+
+This is a "never guess" analysis, same as the response wrapper: it only
+recognizes exactly the shape above. Anything else — `useGlobalFilters` and an
+`APP_FILTER` provider registering different classes, a filter class not
+decorated with `@Catch`, a filter argument that isn't a bare `new X()`, an
+`APP_FILTER` entry using `useValue`/`useFactory` instead of `useClass`, a
+spread element in the `providers` array, more than one distinct class
+registered via `APP_FILTER`, a `catch()` method that doesn't call
+`.json`/`.send` exactly once, a `catch()` method that branches, a response
+body that isn't an object literal, or a property value that isn't one of the
+widened shapes above — is silently not detected. There is no diagnostic for
+this: it's an app-wide concern, not a per-controller-method one, so a failed
+detection just means `nestbridge-error-body.d.ts` is never written (or is
+removed, if the filter is removed) and `NestBridgeErrorBody` stays
+unavailable — `isNestBridgeError(error)` still narrows the error type, just
+without a type argument to narrow `error.body` further.
+
 ## Unsupported (by design, for this MVP)
 
 REST controllers:

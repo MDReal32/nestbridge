@@ -72,6 +72,27 @@ class NestBridgeGraphqlError extends Error {
 }
 ```
 
+## `isNestBridgeError()`
+
+A type guard for narrowing a caught `unknown` error to `NestBridgeError`,
+optionally narrowing its `body` too when `@nestbridge/core`'s
+`detectErrorResponseShape` statically found your app's global exception
+filter's response shape (see the [repository
+README](../../README.md#auto-detected-exception-filter-error-body)):
+
+```ts
+import { isNestBridgeError } from 'nestbridge';
+import type { NestBridgeErrorBody } from '../../.nestbridge/nestbridge-error-body';
+
+try {
+  await users.findOne('123');
+} catch (error) {
+  if (isNestBridgeError<NestBridgeErrorBody>(error)) {
+    console.log(error.body.statusCode, error.body.message);
+  }
+}
+```
+
 ## Types
 
 - `NestBridgeConfig` — the shape passed to `configureNestBridge`.

@@ -59,7 +59,10 @@ const findExportedDeclaration = (
       isClassDeclaration(statement) && statement.name?.text === name,
   );
 
-const findImportSource = (sourceFile: SourceFile, localName: string): ImportSource | undefined => {
+export const findImportSource = (
+  sourceFile: SourceFile,
+  localName: string,
+): ImportSource | undefined => {
   for (const statement of sourceFile.statements) {
     if (!isImportDeclaration(statement) || !isStringLiteralLikeNode(statement.moduleSpecifier)) {
       continue;

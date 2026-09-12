@@ -94,6 +94,35 @@ import { detectResponseWrapper } from '@nestbridge/core';
 const responseWrapper = detectResponseWrapper('src/main.ts');
 ```
 
+### `detectErrorResponseShape(bootstrapFilePath)`
+
+Statically detects a single global `@Catch(...)` exception filter —
+registered via `app.useGlobalFilters(...)` or an `APP_FILTER` provider on the
+root module — whose `catch()` method reshapes the error through a single
+recognized `.json(...)`/`.send(...)` call, and returns the resulting error
+body type source. Returns `undefined` when no filter is registered, or the
+shape isn't exactly recognized — see the [repository
+README](../../README.md#auto-detected-exception-filter-error-body) for the
+full rules.
+
+```ts
+import { detectErrorResponseShape } from '@nestbridge/core';
+
+const errorResponseShape = detectErrorResponseShape('src/main.ts');
+```
+
+### `generateErrorBodyDeclaration(errorBodyTypeSource)`
+
+Turns the `errorBodyTypeSource` from `detectErrorResponseShape` into the text
+of the fixed `nestbridge-error-body.d.ts` declaration file, exporting a
+`NestBridgeErrorBody` type.
+
+```ts
+import { generateErrorBodyDeclaration } from '@nestbridge/core';
+
+const source = generateErrorBodyDeclaration(errorResponseShape.errorBodyTypeSource);
+```
+
 ### Diagnostics
 
 ```ts
@@ -110,7 +139,8 @@ more diagnostics as a thrown `Error`.
 `ControllerParameterDefinition`, `HttpMethod`, `ParameterSourceKind`,
 `ResolverDefinition`, `ResolverMethodDefinition`,
 `ResolverArgumentDefinition`, `SelectionField`, `GraphqlOperationKind`,
-`NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`, `ResponseWrapperDetection`.
+`NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`, `ResponseWrapperDetection`,
+`ErrorResponseShapeDetection`.
 
 ## License
 

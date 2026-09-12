@@ -1,5 +1,10 @@
-export { analyzeControllers, analyzeResolvers, detectResponseWrapper } from './analysis';
-export { generateControllerDeclaration } from './declarations';
+export {
+  analyzeControllers,
+  analyzeResolvers,
+  detectErrorResponseShape,
+  detectResponseWrapper,
+} from './analysis';
+export { generateControllerDeclaration, generateErrorBodyDeclaration } from './declarations';
 export type { NestBridgeDiagnostic, NestBridgeDiagnosticCode } from './diagnostics';
 export { formatDiagnostic, NestBridgeDiagnosticError } from './diagnostics';
 export type {
@@ -7,6 +12,7 @@ export type {
   ControllerDefinition,
   ControllerMethodDefinition,
   ControllerParameterDefinition,
+  ErrorResponseShapeDetection,
   GraphqlOperationKind,
   HttpMethod,
   ParameterSourceKind,

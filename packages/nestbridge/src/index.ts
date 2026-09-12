@@ -8,6 +8,7 @@ export type {
 export {
   configureNestBridge,
   graphqlRequest,
+  isNestBridgeError,
   NestBridgeError,
   NestBridgeGraphqlError,
   request,
