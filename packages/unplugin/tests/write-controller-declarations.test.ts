@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mirroredDeclarationPath, writeControllerDeclarations } from '../src/declarations';
 
 const fixturesRoot = resolve(import.meta.dirname, 'fixtures');
-const outputDir = '.nestbridge-test-output';
+const outputDir = '.nestbridge-test-output-controller';
 
 afterEach(() => {
   rmSync(resolve(fixturesRoot, outputDir), { recursive: true, force: true });

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { errorBodyDeclarationPath, writeErrorBodyDeclaration } from '../src/declarations';
 
 const fixturesRoot = resolve(import.meta.dirname, 'fixtures');
-const outputDir = '.nestbridge-test-output';
+const outputDir = '.nestbridge-test-output-error-body';
 const resolvedOutputDir = resolve(fixturesRoot, outputDir);
 
 afterEach(() => {
