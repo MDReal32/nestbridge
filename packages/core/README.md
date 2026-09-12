@@ -77,6 +77,23 @@ import { generateControllerDeclaration } from '@nestbridge/core';
 const source = generateControllerDeclaration(controller, outputPath);
 ```
 
+### `detectResponseWrapper(bootstrapFilePath)`
+
+Statically detects `app.useGlobalInterceptors(...)` registrations in the
+bootstrap file whose `intercept()` method reshapes every response through a
+single recognized `next.handle().pipe(map(...))` call, composing multiple
+chained interceptors in registration order, and returns the resulting
+wrapped-response type source. Returns `undefined` when no interceptor is
+registered, or the shape isn't exactly recognized — see the [repository
+README](../../README.md#auto-detected-global-response-wrapper) for the full
+rules.
+
+```ts
+import { detectResponseWrapper } from '@nestbridge/core';
+
+const responseWrapper = detectResponseWrapper('src/main.ts');
+```
+
 ### Diagnostics
 
 ```ts
@@ -93,7 +110,7 @@ more diagnostics as a thrown `Error`.
 `ControllerParameterDefinition`, `HttpMethod`, `ParameterSourceKind`,
 `ResolverDefinition`, `ResolverMethodDefinition`,
 `ResolverArgumentDefinition`, `SelectionField`, `GraphqlOperationKind`,
-`NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`.
+`NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`, `ResponseWrapperDetection`.
 
 ## License
 
