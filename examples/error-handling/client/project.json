@@ -1,0 +1,10 @@
+{
+  "targets": {
+    "build": {
+      "dependsOn": ["^build", "lint", "test"]
+    },
+    "typecheck": {
+      "dependsOn": ["build"]
+    }
+  }
+}

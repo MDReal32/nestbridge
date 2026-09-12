@@ -176,8 +176,9 @@ shows you the real method signatures.
 - `@nestbridge/core` never depends on Vite, and `@nestbridge/runtime` never
   depends on NestJS — see [Architectural constraints](#architectural-constraints).
 
-Each app under [`examples/`](../../examples) (`http`, `graphql`, `observable`,
-`streamable-file`) includes an automated test (`client/tests/bundle-verification.test.ts`)
+Each app under [`examples/`](../../examples) (`error-handling`, `graphql`,
+`http`, `observable`, `streamable-file`) includes an automated test
+(`client/tests/bundle-verification.test.ts`)
 that builds the client and asserts the production bundle contains none of
 `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`,
 or the real service implementation.
