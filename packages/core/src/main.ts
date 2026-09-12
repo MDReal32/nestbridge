@@ -3,12 +3,14 @@ export { generateControllerDeclaration } from './declarations';
 export type { NestBridgeDiagnostic, NestBridgeDiagnosticCode } from './diagnostics';
 export { formatDiagnostic, NestBridgeDiagnosticError } from './diagnostics';
 export type {
+  ControllerAnalysisResult,
   ControllerDefinition,
   ControllerMethodDefinition,
   ControllerParameterDefinition,
   GraphqlOperationKind,
   HttpMethod,
   ParameterSourceKind,
+  ResolverAnalysisResult,
   ResolverArgumentDefinition,
   ResolverDefinition,
   ResolverMethodDefinition,

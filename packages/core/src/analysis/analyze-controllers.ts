@@ -1,12 +1,10 @@
 import type { NestBridgeDiagnostic } from '../diagnostics';
-import type { ControllerDefinition } from '../models';
+import type { ControllerAnalysisResult, ControllerDefinition } from '../models';
 import { extractControllerDefinition } from './extract-controller-definition';
 import { findControllerClasses } from './find-controller-classes';
 import { parseSourceFile } from './parse-source-file';
 
-export const analyzeControllers = (
-  filePaths: readonly string[],
-): { controllers: ControllerDefinition[]; diagnostics: NestBridgeDiagnostic[] } => {
+export const analyzeControllers = (filePaths: readonly string[]): ControllerAnalysisResult => {
   const diagnostics: NestBridgeDiagnostic[] = [];
   const controllers: ControllerDefinition[] = [];
 

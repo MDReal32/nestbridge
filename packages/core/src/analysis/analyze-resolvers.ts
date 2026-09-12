@@ -1,12 +1,10 @@
 import type { NestBridgeDiagnostic } from '../diagnostics';
-import type { ResolverDefinition } from '../models';
+import type { ResolverAnalysisResult, ResolverDefinition } from '../models';
 import { extractResolverDefinition } from './extract-resolver-definition';
 import { findResolverClasses } from './find-resolver-classes';
 import { parseSourceFile } from './parse-source-file';
 
-export const analyzeResolvers = (
-  filePaths: readonly string[],
-): { resolvers: ResolverDefinition[]; diagnostics: NestBridgeDiagnostic[] } => {
+export const analyzeResolvers = (filePaths: readonly string[]): ResolverAnalysisResult => {
   const diagnostics: NestBridgeDiagnostic[] = [];
   const resolvers: ResolverDefinition[] = [];
 
