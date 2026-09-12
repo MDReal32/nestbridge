@@ -68,13 +68,22 @@ tests) that need the resolved shape ahead of time.
    through [`@nestbridge/core`](../core)'s static analysis, and writes the
    generated `.d.ts` declarations to `outputDir` so TypeScript sees a
    client-facing shape instead of the real file.
-2. It intercepts the bundler's resolution of that same import (`resolveId`/
+2. It also discovers a single bootstrap file (`main.ts`) under `root` and
+   runs it through `@nestbridge/core`'s `detectResponseWrapper` and
+   `detectErrorResponseShape`. A registered global response interceptor is
+   reflected directly in the generated controller declarations; a
+   registered `@Catch` exception filter is written to a fixed
+   `nestbridge-error-body.d.ts` file in `outputDir`. Neither writes anything
+   when nothing is registered — see the [repository
+   README](../../README.md) for what's recognized.
+3. It intercepts the bundler's resolution of that same import (`resolveId`/
    `transform`) and serves generated code that calls
    [`@nestbridge/runtime`](../runtime) instead of the real controller or
    resolver — the real source, its NestJS decorators, and its dependencies
    never enter the bundle.
-3. On watched file changes (`watchChange`), it re-analyzes only the affected
-   file and rewrites its declaration and generated module.
+4. On watched file changes (`watchChange`), it re-analyzes only the affected
+   file and rewrites its declaration and generated module; a change to the
+   bootstrap file itself re-runs the interceptor/filter detection too.
 
 Diagnostics from `@nestbridge/core` (an unsupported decorator, a
 non-literal route path, etc.) are thrown during a one-shot build and logged
