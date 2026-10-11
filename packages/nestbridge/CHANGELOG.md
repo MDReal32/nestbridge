@@ -1,5 +1,14 @@
 # nestbridge
 
+## 2.1.3
+
+### Patch Changes
+
+- Updated dependencies [cec7886]
+  - @nestbridge/vite@2.1.3
+  - @nestbridge/webpack@2.1.3
+  - @nestbridge/runtime@2.1.3
+
 ## 2.1.2
 
 ### Patch Changes
