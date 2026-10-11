@@ -163,7 +163,13 @@ jobs:
             exit 0
           fi
           echo "Publishing $name@$version"
-          (cd "${{ matrix.dir }}" && npm publish --access public --provenance)
+          tarball="$RUNNER_TEMP/package.tgz"
+          (cd "${{ matrix.dir }}" && yarn pack --out "$tarball")
+          if tar -xzOf "$tarball" package/package.json | grep -q '"workspace:'; then
+            echo "::error::Packed $name@$version still contains workspace: dependency specifiers"
+            exit 1
+          fi
+          npm publish "$tarball" --access public --provenance
           git tag "$name@$version"
           git push origin "$name@$version"
           GH_TOKEN=${{ github.token }} gh release create "$name@$version" --title "$name@$version" --generate-notes
