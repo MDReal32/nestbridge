@@ -34,6 +34,20 @@ describe('resolveNestBridgeOptions', () => {
     expect(entries[1]?.resolvers).toEqual(['store/**/*.resolver.ts']);
   });
 
+  it('passes the logLevel through and leaves it undefined by default', () => {
+    const [quiet] = resolveNestBridgeOptions({ controllers: 'a', logLevel: 'error' });
+    const [inherited] = resolveNestBridgeOptions({ controllers: 'a' });
+
+    expect(quiet?.logLevel).toBe('error');
+    expect(inherited?.logLevel).toBeUndefined();
+  });
+
+  it('rejects an unknown logLevel', () => {
+    const untypedOptions = JSON.parse('{ "controllers": "a", "logLevel": "verbose" }');
+
+    expect(() => resolveNestBridgeOptions(untypedOptions)).toThrow('Invalid logLevel "verbose"');
+  });
+
   it('turns a string globalPrefix into a prefix without exclusions', () => {
     const [entry] = resolveNestBridgeOptions({ controllers: 'a', globalPrefix: 'api' });
 

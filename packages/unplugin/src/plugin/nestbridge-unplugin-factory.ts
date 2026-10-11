@@ -2,7 +2,11 @@ import { createUnplugin, type UnpluginInstance, type UnpluginOptions } from 'unp
 import { generateConfigModule } from '../codegen';
 import { type NestBridgePluginOptions, resolveNestBridgeOptions } from '../options';
 import { CONFIG_VIRTUAL_MODULE_ID, RESOLVED_CONFIG_VIRTUAL_MODULE_ID } from '../virtual-modules';
+import type { BundlerLogger } from './bundler-logger';
+import { consoleLogger } from './console-logger';
+import { createLevelLogger } from './create-level-logger';
 import { findOverlappingFiles } from './find-overlapping-files';
+import { mostVerboseLogLevel } from './most-verbose-log-level';
 import { createNestBridgeApp, type NestBridgeApp } from './nestbridge-app';
 import { normalizePath } from './normalize-path';
 import { reportDiagnostics } from './report-diagnostics';
@@ -17,11 +21,14 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
   let baseRoot = process.cwd();
   let bundlerRoot: string | undefined;
   let apps: NestBridgeApp[] = [];
+  let bundlerLogger: BundlerLogger = consoleLogger;
+
+  const loggerOf = (app: NestBridgeApp) => createLevelLogger(app.options.logLevel, bundlerLogger);
 
   const log = (app: NestBridgeApp, message: string) => {
     if (app.options.debug) {
       const prefix = app.options.name === undefined ? '' : `${app.options.name}: `;
-      console.log(`[nestbridge] ${prefix}${message}`);
+      loggerOf(app).info(`[nestbridge] ${prefix}${message}`);
     }
   };
 
@@ -32,8 +39,9 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
       reportMessages(
         problems.map((problem) => `[nestbridge] ${problem}`),
         meta.watchMode,
+        loggerOf(app),
       );
-      reportDiagnostics(diagnostics, meta.watchMode);
+      reportDiagnostics(diagnostics, meta.watchMode, loggerOf(app));
       log(
         app,
         `analyzed ${controllerCount} controller(s), ${resolverCount} resolver(s), ` +
@@ -44,6 +52,10 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
     reportMessages(
       findOverlappingFiles(apps).map((problem) => `[nestbridge] ${problem}`),
       meta.watchMode,
+      createLevelLogger(
+        mostVerboseLogLevel(apps.map((app) => app.options.logLevel)),
+        bundlerLogger,
+      ),
     );
   };
 
@@ -105,11 +117,13 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
       configResolved(config) {
         baseRoot = config.root;
         bundlerRoot = config.root;
+        bundlerLogger = config.logger;
       },
     },
 
     webpack(compiler) {
       bundlerRoot = compiler.options.context ?? bundlerRoot;
+      bundlerLogger = compiler.getInfrastructureLogger('nestbridge');
     },
   } satisfies UnpluginOptions;
 });

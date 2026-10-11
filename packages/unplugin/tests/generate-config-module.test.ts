@@ -11,6 +11,7 @@ const entry = (overrides: Partial<ResolvedNestBridgeOptions>): ResolvedNestBridg
   globalPrefix: undefined,
   versioning: undefined,
   debug: false,
+  logLevel: undefined,
   outputDir: '.nestbridge',
   root: undefined,
   ...overrides,

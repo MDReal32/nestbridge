@@ -3,6 +3,7 @@ import type { WebpackPluginInstance } from 'webpack';
 
 export type {
   GlobalPrefixOption,
+  NestBridgeLogLevel,
   NestBridgeOptions,
   NestBridgePluginOptions,
   VersioningOption,

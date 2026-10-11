@@ -1,5 +1,6 @@
 export type {
   GlobalPrefixOption,
+  NestBridgeLogLevel,
   NestBridgeOptions,
   NestBridgePluginOptions,
   VersioningOption,

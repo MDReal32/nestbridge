@@ -20,6 +20,7 @@ export const resolveNestBridgeEntry = (options: NestBridgeOptions): ResolvedNest
   globalPrefix: resolveGlobalPrefixOption(options.globalPrefix),
   versioning: resolveVersioningOption(options.versioning),
   debug: options.debug ?? false,
+  logLevel: options.logLevel,
   outputDir: options.outputDir ?? '.nestbridge',
   root: options.root,
 });

@@ -1,4 +1,5 @@
 import type { GlobalPrefix, UriVersioning } from '@nestbridge/core';
+import type { NestBridgeLogLevel } from './nestbridge-log-level';
 
 export interface ResolvedNestBridgeOptions {
   name: string | undefined;
@@ -9,6 +10,7 @@ export interface ResolvedNestBridgeOptions {
   globalPrefix: GlobalPrefix | false | undefined;
   versioning: UriVersioning | false | undefined;
   debug: boolean;
+  logLevel: NestBridgeLogLevel | undefined;
   outputDir: string;
   root: string | undefined;
 }

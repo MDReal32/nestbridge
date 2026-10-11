@@ -3,6 +3,7 @@ import type { Plugin } from 'vite';
 
 export type {
   GlobalPrefixOption,
+  NestBridgeLogLevel,
   NestBridgeOptions,
   NestBridgePluginOptions,
   VersioningOption,

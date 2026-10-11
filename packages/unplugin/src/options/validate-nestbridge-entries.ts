@@ -1,3 +1,4 @@
+import { LOG_LEVEL_RANKS } from './log-level-ranks';
 import type { ResolvedNestBridgeOptions } from './resolved-nestbridge-options';
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
@@ -10,6 +11,12 @@ export const validateNestBridgeEntries = (entries: readonly ResolvedNestBridgeOp
   const seenNames = new Set<string>();
 
   entries.forEach((entry, index) => {
+    if (entry.logLevel !== undefined && !Object.hasOwn(LOG_LEVEL_RANKS, entry.logLevel)) {
+      throw new Error(
+        `[nestbridge] Invalid logLevel "${entry.logLevel}". Use one of: ${Object.keys(LOG_LEVEL_RANKS).join(', ')}.`,
+      );
+    }
+
     if (entry.name === undefined) {
       if (entries.length > 1) {
         throw new Error(
