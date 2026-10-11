@@ -1,13 +1,8 @@
-export type { NestBridgeConfig } from './config';
 export { configureNestBridge, setNestBridgeBaseURL } from './config';
-export type { NestBridgeGraphqlRequest } from './graphql-adapter';
+export * from './config/nestbridge-config';
 export { graphqlRequest, NestBridgeGraphqlError } from './graphql-adapter';
-export type { NestBridgeRequest } from './http-adapter';
+export * from './graphql-adapter/nestbridge-graphql-request';
 export { isNestBridgeError, NestBridgeError, request } from './http-adapter';
-export type {
-  RemoteMethod,
-  RemoteObservableResult,
-  RemoteResult,
-  RemoteStreamResult,
-} from './remote-method';
+export * from './http-adapter/nestbridge-request';
+export * from './remote-method';
 export { VERSION } from './version';

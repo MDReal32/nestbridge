@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { dts } from 'rolldown-plugin-dts';
 import { defineConfig } from 'vitest/config';
 
+import { declarationModuleMarker } from './declaration-module-marker';
+
 interface PackageManifest {
   name: string;
 }
@@ -20,10 +22,12 @@ const readPackageManifest = (root: string) => {
 const moduleNameFromPackageName = (packageName: string) =>
   packageName.replace(/^@nestbridge\//, '');
 
-const dtsPlugins = (tsconfigPath: string) =>
-  dts({ tsconfig: tsconfigPath, generator: 'oxc' }).map((plugin) =>
+const dtsPlugins = (tsconfigPath: string) => [
+  ...dts({ tsconfig: tsconfigPath, generator: 'oxc' }).map((plugin) =>
     plugin.name.endsWith('fake-js') ? { ...plugin, enforce: 'pre' as const } : plugin,
-  );
+  ),
+  declarationModuleMarker(),
+];
 
 export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
   const manifest = readPackageManifest(options.root);
