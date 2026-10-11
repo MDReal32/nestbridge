@@ -1,5 +1,11 @@
 # @nestbridge/vite
 
+## 2.1.4
+
+### Patch Changes
+
+- @nestbridge/unplugin@2.1.4
+
 ## 2.1.3
 
 ### Patch Changes
