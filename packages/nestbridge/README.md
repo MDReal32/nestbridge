@@ -581,6 +581,7 @@ unexpected constructor argument) resolve exactly as the architecture promises.
 | `@Version(version)` | Version of one route | Replaces the controller's version for that method |
 | `@Get` / `@Post` / `@Put` / `@Patch` / `@Delete` | HTTP method + path | `request({ method, path })` |
 | `@Param('name')` | Route parameter | Interpolated into the path, `encodeURIComponent`-escaped |
+| `@Param()` | Whole route-parameter object | Each `:token` in the path is read from the object's property of the same name, `encodeURIComponent`-escaped; a `@Param('name')` on the same method wins for its token |
 | `@Query('name')` | Named query parameter | Merged into the `query` object |
 | `@Query()` | Whole query object | Passed through as `query` |
 | `@Body('name')` | Named body field | Merged into the `body` object |
@@ -897,7 +898,10 @@ REST controllers (each of these produces a diagnostic):
   or response objects
 - parameters without `@Param`/`@Query`/`@Body`/`@Headers`, including custom
   parameter decorators and destructured parameters
-- a bare `@Param()` or `@Headers()` — both need a name
+- a bare `@Headers()` — it needs a header name
+- a `@Param`, `@Query`, `@Body` or `@Headers` argument that is not a string
+  literal, such as a pipe (`@Param(ParseIntPipe)`) — pipes are fine as the
+  second argument (`@Param('id', ParseIntPipe)`)
 - runtime-computed controller or route paths
 - runtime-computed controller or method versions
 - `setGlobalPrefix()` and `enableVersioning()` calls that are not literal,
