@@ -1,5 +1,12 @@
 # @nestbridge/vite
 
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies [1ca473c]
+  - @nestbridge/unplugin@2.3.0
+
 ## 2.2.0
 
 ### Minor Changes
