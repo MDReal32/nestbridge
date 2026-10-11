@@ -20,3 +20,7 @@ if (isNestBridgeError<NestBridgeErrorBody>(unknownError)) {
   const _statusCode: number = unknownError.body.statusCode;
   const _message: string = unknownError.body.message;
 }
+
+const pending = notes.create({ title: 'Second note' });
+pending.abort();
+const _pendingRequestId: string = (await pending).meta.requestId;

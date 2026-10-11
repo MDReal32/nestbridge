@@ -11,3 +11,7 @@ files.download(42);
 
 // @ts-expect-error - the generated client constructor accepts no arguments
 new FilesController('unexpected-di-argument');
+
+const pending = files.download('42');
+pending.abort();
+const _pendingSize: number = (await pending).size;

@@ -10,3 +10,7 @@ booksResolver.findOne(1);
 
 // @ts-expect-error - the generated client constructor accepts no arguments
 new BooksResolver('unexpected-di-argument');
+
+const pending = booksResolver.findOne('1');
+pending.abort();
+const _pendingTitle: string = (await pending).title;

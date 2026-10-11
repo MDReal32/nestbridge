@@ -98,7 +98,7 @@ describe('nestBridgeUnplugin wiring', () => {
 
     const declaration = readFileSync(declarationPath, 'utf-8');
     expect(declaration).toContain(
-      'type __NestBridgeWrapped<T> = T extends (...args: never[]) => infer Result ? Promise<{ data: Awaited<Result>; meta: { requestId: string } }> : never;',
+      'type __NestBridgeWrapped<T> = T extends (...args: never[]) => infer Result ? AbortablePromise<{ data: Awaited<Result>; meta: { requestId: string } }> : never;',
     );
     expect(declaration).toContain(
       "findOne(...args: Parameters<__ServerWidgetsController['findOne']>): __NestBridgeWrapped<__ServerWidgetsController['findOne']>;",

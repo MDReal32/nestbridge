@@ -159,7 +159,7 @@ describe('generateControllerDeclaration', () => {
     );
 
     expect(declaration).toContain(
-      'type __NestBridgeWrapped<T> = T extends (...args: never[]) => infer Result ? Promise<{ data: Awaited<Result>; meta: { requestId: string } }> : never;',
+      'type __NestBridgeWrapped<T> = T extends (...args: never[]) => infer Result ? AbortablePromise<{ data: Awaited<Result>; meta: { requestId: string } }> : never;',
     );
   });
 
@@ -181,11 +181,11 @@ describe('generateControllerDeclaration', () => {
       "import type { RemoteObservableResult, RemoteResult, RemoteStreamResult } from 'nestbridge';",
     );
     expect(declaration).toContain(
-      "import type { RemoteObservableResult, RemoteStreamResult } from 'nestbridge';",
+      "import type { AbortablePromise, RemoteObservableResult, RemoteStreamResult } from 'nestbridge';",
     );
   });
 
-  it('omits the nestbridge import entirely when every method resolves to the wrapped-result helper', () => {
+  it('imports only AbortablePromise when every method resolves to the wrapped-result helper', () => {
     const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
     const declaration = generateControllerDeclaration(
       controllers[0]!,
@@ -193,7 +193,8 @@ describe('generateControllerDeclaration', () => {
       responseWrapper,
     );
 
-    expect(declaration).not.toContain("from 'nestbridge'");
+    expect(declaration).toContain("import type { AbortablePromise } from 'nestbridge';");
+    expect(declaration).not.toContain('RemoteResult');
     expect(declaration).toContain(
       "findOne(...args: Parameters<__ServerWidgetsController['findOne']>): __NestBridgeWrapped<__ServerWidgetsController['findOne']>;",
     );

@@ -1,3 +1,4 @@
+export type { AbortablePromise } from './abortable';
 export {
   configureNestBridge,
   setNestBridgeBaseURL,

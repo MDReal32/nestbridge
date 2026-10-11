@@ -16,6 +16,8 @@ const REMOTE_RESULT_HELPERS: Record<ResponseKind, string> = {
 
 const WRAPPED_RESULT_HELPER = '__NestBridgeWrapped';
 
+const ABORTABLE_PROMISE = 'AbortablePromise';
+
 const toPosixPath = (filePath: string) => filePath.replace(/\\/g, '/');
 
 const importSpecifierFor = (sourceFile: string, outputFilePath: string) => {
@@ -62,12 +64,18 @@ export const generateControllerDeclaration = (
   const helperImports =
     rawHelperNames.length === 0
       ? ['RemoteResult']
-      : Array.from(new Set(rawHelperNames.filter((name) => name !== WRAPPED_RESULT_HELPER))).sort();
+      : Array.from(
+          new Set(
+            rawHelperNames.map((name) =>
+              name === WRAPPED_RESULT_HELPER ? ABORTABLE_PROMISE : name,
+            ),
+          ),
+        ).sort();
 
   const wrappedResultTypeAliasLines =
     responseWrapper !== undefined && hasWrappedMethod
       ? [
-          `type ${WRAPPED_RESULT_HELPER}<T> = T extends (...args: never[]) => infer Result ? Promise<${responseWrapper.wrappedResultTypeSource}> : never;`,
+          `type ${WRAPPED_RESULT_HELPER}<T> = T extends (...args: never[]) => infer Result ? ${ABORTABLE_PROMISE}<${responseWrapper.wrappedResultTypeSource}> : never;`,
           '',
         ]
       : [];

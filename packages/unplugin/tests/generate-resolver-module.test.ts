@@ -70,12 +70,19 @@ describe('generateResolverModule', () => {
     expect(code).toContain('variables: { "id": id }');
   });
 
-  it('unwraps the GraphQL response down to the field the method calls', () => {
+  it('asks the runtime to unwrap the GraphQL response down to the field the method calls', () => {
     const code = generateResolverModule(resolver([method({})]));
 
-    expect(code).toContain('async findOne() {');
-    expect(code).toContain('const result = await graphqlRequest({');
-    expect(code).toContain('return result.findOne;');
+    expect(code).toContain('field: "findOne"');
+  });
+
+  it('returns the graphqlRequest call itself so the abortable promise reaches the caller', () => {
+    const code = generateResolverModule(resolver([method({})]));
+
+    expect(code).toContain('findOne() {');
+    expect(code).toContain('return graphqlRequest({');
+    expect(code).not.toContain('async');
+    expect(code).not.toContain('await');
   });
 
   it('omits the variables property when the method has no arguments', () => {
@@ -107,7 +114,7 @@ describe('generateResolverModule', () => {
     expect(code).toContain(
       'document: "mutation Create($name: String!) { createUser(name: $name) { id } }"',
     );
-    expect(code).toContain('return result.createUser;');
+    expect(code).toContain('field: "createUser"');
   });
 
   it('renders nested selection sets', () => {

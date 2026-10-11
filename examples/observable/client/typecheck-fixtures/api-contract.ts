@@ -10,3 +10,7 @@ events.latest(42);
 
 // @ts-expect-error - the generated client constructor accepts no arguments
 new EventsController('unexpected-di-argument');
+
+const pending = events.latest('42');
+pending.abort();
+const _pendingMessage: string = (await pending).message;

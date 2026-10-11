@@ -1,41 +1,6 @@
-import { getNestBridgeConfig, resolveBaseURL } from '../config';
-import { buildRequestUrl } from './build-request-url';
-import { extractErrorMessage } from './extract-error-message';
-import { NestBridgeError } from './nestbridge-error';
+import { type AbortablePromise, createAbortablePromise } from '../abortable';
 import type { NestBridgeRequest } from './nestbridge-request';
-import { parseResponseBody } from './parse-response-body';
-import { resolveRequestHeaders } from './resolve-request-headers';
+import { sendRequest } from './send-request';
 
-export const request = async <T>(nestBridgeRequest: NestBridgeRequest): Promise<T> => {
-  const config = getNestBridgeConfig();
-  const fetchImplementation = config.fetch ?? globalThis.fetch;
-  const hasBody = nestBridgeRequest.body !== undefined;
-  const url = buildRequestUrl(
-    resolveBaseURL(nestBridgeRequest.service),
-    nestBridgeRequest.path,
-    nestBridgeRequest.query,
-  );
-  const headers = await resolveRequestHeaders(config, nestBridgeRequest.headers, hasBody);
-
-  const response = await fetchImplementation(url, {
-    method: nestBridgeRequest.method,
-    headers,
-    body: hasBody ? JSON.stringify(nestBridgeRequest.body) : undefined,
-  });
-
-  if (!response.ok) {
-    const responseBody = await parseResponseBody(response);
-    const backendMessage = extractErrorMessage(responseBody);
-    const message = `NestBridge request to ${url} failed with status ${response.status}.${
-      backendMessage === undefined ? '' : ` ${backendMessage}`
-    }`;
-
-    throw new NestBridgeError(message, response.status, responseBody, response);
-  }
-
-  if (nestBridgeRequest.responseType === 'blob') {
-    return (await response.blob()) as T;
-  }
-
-  return (await parseResponseBody(response)) as T;
-};
+export const request = <T>(nestBridgeRequest: NestBridgeRequest): AbortablePromise<T> =>
+  createAbortablePromise((signal) => sendRequest<T>(nestBridgeRequest, signal));

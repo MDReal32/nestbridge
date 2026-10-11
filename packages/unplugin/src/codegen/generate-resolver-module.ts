@@ -20,7 +20,10 @@ const generateVariablesExpression = (resolverArguments: readonly ResolverArgumen
 };
 
 const generateMethod = (method: ResolverMethodDefinition, service: string | undefined) => {
-  const requestProperties = [`document: ${JSON.stringify(generateGraphqlDocument(method))}`];
+  const requestProperties = [
+    `document: ${JSON.stringify(generateGraphqlDocument(method))}`,
+    `field: ${JSON.stringify(method.operationName)}`,
+  ];
 
   if (service !== undefined) {
     requestProperties.push(`service: ${JSON.stringify(service)}`);
@@ -32,12 +35,10 @@ const generateMethod = (method: ResolverMethodDefinition, service: string | unde
   }
 
   return [
-    `  async ${method.name}(${generateResolverArgumentList(method.arguments)}) {`,
-    '    const result = await graphqlRequest({',
+    `  ${method.name}(${generateResolverArgumentList(method.arguments)}) {`,
+    '    return graphqlRequest({',
     ...requestProperties.map((property) => `      ${property},`),
     '    });',
-    '',
-    `    return result.${method.operationName};`,
     '  }',
   ].join('\n');
 };
