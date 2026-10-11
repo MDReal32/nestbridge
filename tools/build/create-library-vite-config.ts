@@ -43,6 +43,7 @@ export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
         fileName: () => outputFileName,
       },
       rollupOptions: {
+        external: [/^@nestbridge\//],
         output: {
           entryFileNames: outputFileName,
         },
