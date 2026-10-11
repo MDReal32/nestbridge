@@ -1,14 +1,17 @@
 import type { MethodDeclaration, SourceFile } from 'typescript/unstable/ast';
-import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
-import { HTTP_METHOD_DECORATOR_NAMES } from '../models/http-method';
+import { isCallExpression } from 'typescript/unstable/ast';
+import type { NestBridgeDiagnostic } from '../diagnostics';
+import { HTTP_METHOD_DECORATOR_NAMES } from '../models';
 import {
   decoratorNameOf,
   findAnyDecorator,
+  findDecorator,
   readStaticStringArgument,
 } from './decorator-inspection';
 import { extractParameterDefinition } from './extract-parameter-definition';
 import { locationOf } from './node-location';
 import { readResponseKind } from './read-response-kind';
+import { readRouteVersion } from './read-route-version';
 import { joinRoutePath } from './route-path';
 
 interface ExtractionContext {
@@ -16,8 +19,41 @@ interface ExtractionContext {
   filePath: string;
   controllerName: string;
   controllerPath: string;
+  controllerVersion: string | null | undefined;
   diagnostics: NestBridgeDiagnostic[];
 }
+
+const VERSION_DECORATOR_NAME = 'Version';
+
+const readMethodVersion = (method: MethodDeclaration, context: ExtractionContext) => {
+  const decorator = findDecorator(method, VERSION_DECORATOR_NAME);
+
+  if (decorator === undefined) {
+    return { value: context.controllerVersion };
+  }
+
+  const [argument] = isCallExpression(decorator.expression) ? decorator.expression.arguments : [];
+  const routeVersion = argument === undefined ? undefined : readRouteVersion(argument);
+
+  if (routeVersion?.ok === true) {
+    return { value: routeVersion.version };
+  }
+
+  const location = locationOf(context.sourceFile, method);
+
+  context.diagnostics.push({
+    code: 'unsupported-route',
+    title: 'Unsupported route.',
+    controllerName: context.controllerName,
+    memberName: method.name.getText(),
+    detail: 'Route versions must be statically analyzable.',
+    found: `@Version(${routeVersion?.argumentText ?? ''})`,
+    filePath: context.filePath,
+    line: location.line,
+    column: location.column,
+  });
+  return undefined;
+};
 
 export const extractMethodDefinition = (method: MethodDeclaration, context: ExtractionContext) => {
   const decorator = findAnyDecorator(method, Object.keys(HTTP_METHOD_DECORATOR_NAMES));
@@ -57,6 +93,12 @@ export const extractMethodDefinition = (method: MethodDeclaration, context: Extr
     return undefined;
   }
 
+  const version = readMethodVersion(method, context);
+
+  if (version === undefined) {
+    return undefined;
+  }
+
   const parameters = method.parameters.map((parameter, index) =>
     extractParameterDefinition(parameter, index, {
       sourceFile: context.sourceFile,
@@ -75,6 +117,7 @@ export const extractMethodDefinition = (method: MethodDeclaration, context: Extr
     name: methodName,
     httpMethod,
     path: joinRoutePath(context.controllerPath, routeArgument.value),
+    version: version.value,
     parameters: parameters.filter((parameter) => parameter !== undefined),
     responseKind: readResponseKind(method.type),
     line: location.line,

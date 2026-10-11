@@ -1,9 +1,10 @@
 import type { ClassDeclaration, MethodDeclaration, SourceFile } from 'typescript/unstable/ast';
 import { isMethodDeclaration } from 'typescript/unstable/ast';
 import type { NestBridgeDiagnostic } from '../diagnostics/nestbridge-diagnostic';
-import { findDecorator, readStaticStringArgument } from './decorator-inspection';
+import { findDecorator } from './decorator-inspection';
 import { extractMethodDefinition } from './extract-method-definition';
 import { locationOf } from './node-location';
+import { readControllerOptions } from './read-controller-options';
 
 export const extractControllerDefinition = (
   classDeclaration: ClassDeclaration,
@@ -19,16 +20,16 @@ export const extractControllerDefinition = (
   }
 
   const location = locationOf(sourceFile, classDeclaration);
-  const argument = readStaticStringArgument(decorator);
+  const options = readControllerOptions(decorator);
 
-  if (!argument.ok) {
+  if (!options.ok) {
     diagnostics.push({
       code: 'unsupported-route',
       title: 'Unsupported route.',
       controllerName,
       memberName: '',
-      detail: 'Controller paths must be statically analyzable.',
-      found: `@Controller(${argument.argumentText})`,
+      detail: 'Controller paths and versions must be statically analyzable.',
+      found: `@Controller(${options.argumentText})`,
       filePath,
       line: location.line,
       column: location.column,
@@ -43,7 +44,8 @@ export const extractControllerDefinition = (
         sourceFile,
         filePath,
         controllerName,
-        controllerPath: argument.value ?? '',
+        controllerPath: options.path ?? '',
+        controllerVersion: options.version,
         diagnostics,
       }),
     )
@@ -51,7 +53,7 @@ export const extractControllerDefinition = (
 
   return {
     name: controllerName,
-    path: argument.value ?? '',
+    path: options.path ?? '',
     sourceFile: filePath,
     methods,
   };

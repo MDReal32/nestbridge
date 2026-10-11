@@ -3,7 +3,9 @@ export type NestBridgeDiagnosticCode =
   | 'unsupported-parameter'
   | 'unsupported-argument'
   | 'unsupported-return-type'
-  | 'circular-type';
+  | 'circular-type'
+  | 'unsupported-global-prefix'
+  | 'unsupported-versioning';
 
 export interface NestBridgeDiagnostic {
   code: NestBridgeDiagnosticCode;

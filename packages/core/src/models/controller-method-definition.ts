@@ -6,6 +6,11 @@ export interface ControllerMethodDefinition {
   name: string;
   httpMethod: HttpMethod;
   path: string;
+  /**
+   * `undefined` means the route states no version, so the application default version applies;
+   * `null` is `VERSION_NEUTRAL`, which never adds a version to the URL.
+   */
+  version?: string | null;
   parameters: ControllerParameterDefinition[];
   responseKind: ResponseKind;
   line: number;
