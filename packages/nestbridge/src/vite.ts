@@ -1,2 +1,7 @@
-export type { NestBridgeOptions } from '@nestbridge/vite';
+export type {
+  GlobalPrefixOption,
+  NestBridgeOptions,
+  NestBridgePluginOptions,
+  VersioningOption,
+} from '@nestbridge/vite';
 export { nestBridge as default } from '@nestbridge/vite';

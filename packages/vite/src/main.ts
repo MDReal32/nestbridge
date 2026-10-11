@@ -1,6 +1,11 @@
-import { type NestBridgeOptions, nestBridgeUnplugin } from '@nestbridge/unplugin';
+import { type NestBridgePluginOptions, nestBridgeUnplugin } from '@nestbridge/unplugin';
 import type { Plugin } from 'vite';
 
-export type { NestBridgeOptions } from '@nestbridge/unplugin';
-export const nestBridge: (options: NestBridgeOptions) => Plugin = nestBridgeUnplugin.vite;
+export type {
+  GlobalPrefixOption,
+  NestBridgeOptions,
+  NestBridgePluginOptions,
+  VersioningOption,
+} from '@nestbridge/unplugin';
+export const nestBridge: (options: NestBridgePluginOptions) => Plugin = nestBridgeUnplugin.vite;
 export { VERSION } from './version';

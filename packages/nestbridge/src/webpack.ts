@@ -1,2 +1,7 @@
-export type { NestBridgeOptions } from '@nestbridge/webpack';
+export type {
+  GlobalPrefixOption,
+  NestBridgeOptions,
+  NestBridgePluginOptions,
+  VersioningOption,
+} from '@nestbridge/webpack';
 export { nestBridge as default } from '@nestbridge/webpack';
