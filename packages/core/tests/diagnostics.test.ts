@@ -42,6 +42,20 @@ describe('diagnostics', () => {
     expect(diagnostics[0]?.detail).toContain('@Req()');
   });
 
+  it('reports an unsupported-parameter diagnostic for a @Param argument that is not a string literal', () => {
+    const { diagnostics } = analyzeControllers([
+      fixture('unsupported-param-argument.controller.ts'),
+    ]);
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: 'unsupported-parameter',
+      controllerName: 'UnsupportedParamArgumentController',
+      memberName: 'findOne',
+      found: '@Param(ParseIntPipe)',
+    });
+  });
+
   it('formats a diagnostic into a human-readable multi-line message', () => {
     const { diagnostics } = analyzeControllers([fixture('unsupported-route.controller.ts')]);
     const message = formatDiagnostic(diagnostics[0]!);

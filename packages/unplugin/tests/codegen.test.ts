@@ -68,6 +68,97 @@ describe('generateControllerModule', () => {
     expect(code).toContain('path: "/users/" + encodeURIComponent(id)');
   });
 
+  it('reads every route parameter from a whole @Param object', () => {
+    const code = generateControllerModule(
+      controller([
+        method({
+          name: 'findPost',
+          path: '/users/:userId/posts/:slug',
+          parameters: [
+            {
+              index: 0,
+              kind: 'param',
+              parameterName: 'params',
+            },
+          ],
+        }),
+      ]),
+    );
+
+    expect(code).toContain('findPost(params) {');
+    expect(code).toContain(
+      'path: "/users/" + encodeURIComponent(params.userId) + "/posts/" + encodeURIComponent(params.slug)',
+    );
+  });
+
+  it('prefers a named @Param over the whole @Param object for the same token', () => {
+    const code = generateControllerModule(
+      controller([
+        method({
+          name: 'findDraft',
+          path: '/users/:userId/drafts/:slug',
+          parameters: [
+            {
+              index: 0,
+              kind: 'param',
+              name: 'userId',
+              parameterName: 'owner',
+            },
+            {
+              index: 1,
+              kind: 'param',
+              parameterName: 'params',
+            },
+          ],
+        }),
+      ]),
+    );
+
+    expect(code).toContain('findDraft(owner, params) {');
+    expect(code).toContain(
+      'path: "/users/" + encodeURIComponent(owner) + "/drafts/" + encodeURIComponent(params.slug)',
+    );
+  });
+
+  it('reads a route parameter that is not a valid identifier with bracket access', () => {
+    const code = generateControllerModule(
+      controller([
+        method({
+          path: '/users/:2fa',
+          parameters: [
+            {
+              index: 0,
+              kind: 'param',
+              parameterName: 'params',
+            },
+          ],
+        }),
+      ]),
+    );
+
+    expect(code).toContain('path: "/users/" + encodeURIComponent(params["2fa"])');
+  });
+
+  it('keeps an unresolved route token literal when no @Param covers it', () => {
+    const code = generateControllerModule(
+      controller([
+        method({
+          path: '/users/:id',
+          parameters: [
+            {
+              index: 0,
+              kind: 'query',
+              name: 'details',
+              parameterName: 'details',
+            },
+          ],
+        }),
+      ]),
+    );
+
+    expect(code).toContain('path: "/users/" + ":id"');
+  });
+
   it('builds a query object from named @Query parameters', () => {
     const code = generateControllerModule(
       controller([

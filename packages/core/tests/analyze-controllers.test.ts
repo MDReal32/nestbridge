@@ -50,6 +50,30 @@ describe('analyzeControllers', () => {
     });
   });
 
+  it('extracts a whole @Param parameter without a name', () => {
+    const { controllers, diagnostics } = analyzeControllers([fixture('whole-param.controller.ts')]);
+    const method = controllers[0]?.methods.find((candidate) => candidate.name === 'findPost');
+
+    expect(diagnostics).toEqual([]);
+    expect(method?.path).toBe('/users/:userId/posts/:slug');
+    expect(method?.parameters[0]).toMatchObject({
+      kind: 'param',
+      name: undefined,
+      parameterName: 'params',
+      index: 0,
+    });
+  });
+
+  it('extracts a named and a whole @Param parameter from the same method', () => {
+    const { controllers } = analyzeControllers([fixture('whole-param.controller.ts')]);
+    const method = controllers[0]?.methods.find((candidate) => candidate.name === 'findDraft');
+
+    expect(method?.parameters).toMatchObject([
+      { kind: 'param', name: 'userId', parameterName: 'userId', index: 0 },
+      { kind: 'param', name: undefined, parameterName: 'params', index: 1 },
+    ]);
+  });
+
   it('extracts a named @Query parameter', () => {
     const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
     const method = controllers[0]?.methods.find((candidate) => candidate.name === 'search');

@@ -101,21 +101,6 @@ export const extractParameterDefinition = (
   };
 
   if (decoratorName === 'Param') {
-    if (argument.value === undefined) {
-      context.diagnostics.push({
-        code: 'unsupported-parameter',
-        title: 'Unsupported parameter.',
-        controllerName: context.controllerName,
-        memberName: context.methodName,
-        detail:
-          "A whole @Param() is not supported; provide a route parameter name such as @Param('id').",
-        filePath: context.filePath,
-        line: location.line,
-        column: location.column,
-      });
-      return undefined;
-    }
-
     return { ...base, kind: 'param', name: argument.value };
   }
 
