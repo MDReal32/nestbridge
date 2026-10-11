@@ -1,6 +1,11 @@
 export interface NestBridgeRequest {
   method: string;
   path: string;
+  /**
+   * The `name` of the server app that owns this route. Selects the origin
+   * the request is sent to when the plugin is configured with several apps.
+   */
+  service?: string;
   query?: Record<string, unknown>;
   body?: unknown;
   headers?: Record<string, string | undefined>;

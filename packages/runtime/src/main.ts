@@ -1,4 +1,8 @@
-export { configureNestBridge, setNestBridgeBaseURL } from './config';
+export {
+  configureNestBridge,
+  setNestBridgeBaseURL,
+  setNestBridgeServiceBaseURL,
+} from './config';
 export * from './config/nestbridge-config';
 export { graphqlRequest, NestBridgeGraphqlError } from './graphql-adapter';
 export * from './graphql-adapter/nestbridge-graphql-request';

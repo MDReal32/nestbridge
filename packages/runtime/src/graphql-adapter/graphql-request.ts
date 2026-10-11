@@ -18,7 +18,7 @@ export const graphqlRequest = async <T>(
 ): Promise<T> => {
   const config = getNestBridgeConfig();
   const fetchImplementation = config.fetch ?? globalThis.fetch;
-  const endpoint = resolveGraphqlEndpoint(config);
+  const endpoint = resolveGraphqlEndpoint(config, nestBridgeGraphqlRequest.service);
   const headers = await resolveRequestHeaders(config, undefined, true);
 
   const response = await fetchImplementation(endpoint, {
