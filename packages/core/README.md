@@ -29,10 +29,14 @@ yarn add @nestbridge/core
 Parses each file, finds classes decorated with `@Controller(...)`, and
 extracts a plain `ControllerDefinition` per controller — its base path, and
 each `@Get`/`@Post`/`@Put`/`@Patch`/`@Delete` method's HTTP method, route
-path, `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping, and
+path, `version`, `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping, and
 `responseKind` (`'json'`, `'observable'` for an `Observable<T>` return type, or
 `'stream'` for `StreamableFile`), read from the method's declared return type.
-Anything it can't safely resolve statically (a non-literal route path, an
+Both `@Controller('path')` and `@Controller({ path, version })` are read, and
+a method's `@Version(...)` replaces its controller's version. A method's
+`version` is a string, `null` for `VERSION_NEUTRAL`, or `undefined` when the
+route states none (an array of versions uses its first entry). Anything it
+can't safely resolve statically (a non-literal route path or version, an
 unsupported decorator) becomes a `NestBridgeDiagnostic` instead of a guess.
 
 ```ts
@@ -117,6 +121,59 @@ import { detectErrorResponseShape } from '@nestbridge/core';
 const errorResponseShape = detectErrorResponseShape('src/main.ts');
 ```
 
+### `detectGlobalPrefix(bootstrapFilePath)`
+
+Statically reads the app's `setGlobalPrefix(...)` call in the bootstrap file.
+It returns a `BootstrapDetection<GlobalPrefix>`: `{ value, diagnostics }`, where
+`value` is `{ prefix, exclude }` — `exclude` lists the routes the prefix skips
+(string paths, and `{ path, method: RequestMethod.X }` entries as
+`{ path, httpMethod }`) — or `undefined` when the file never sets a prefix. A
+call that is conditional or made more than once, a prefix that is not a string
+literal, or an exclusion it cannot read yields an `unsupported-global-prefix`
+diagnostic and no value.
+
+```ts
+import { detectGlobalPrefix } from '@nestbridge/core';
+
+const { value: globalPrefix, diagnostics } = detectGlobalPrefix('src/main.ts');
+```
+
+### `detectVersioning(bootstrapFilePath)`
+
+Statically reads the app's `enableVersioning(...)` call. It returns a
+`BootstrapDetection<UriVersioning>` whose `value` is
+`{ prefix, defaultVersion? }`: the version prefix (`'v'` unless the call sets
+another string, or `false` for none, read as `''`) and the default version of
+routes that state none. Only `VersioningType.URI` is URL-expressible; header
+and media-type versioning, a conditional or repeated call, and non-literal
+values yield an `unsupported-versioning` diagnostic and no value.
+
+```ts
+import { detectVersioning } from '@nestbridge/core';
+
+const { value: versioning, diagnostics } = detectVersioning('src/main.ts');
+```
+
+### `applyApplicationRouting(controllers, routing)`
+
+Composes the application-level routing onto analyzed controllers, the way Nest
+composes a route: `[global prefix][/<version prefix><version>][controller
+path][method path]`. It returns new `ControllerDefinition`s whose methods'
+`path` is the full request path; a prefix-excluded route skips the prefix but
+keeps its version, and a `null` (`VERSION_NEUTRAL`) version adds no segment.
+`routing` is an `ApplicationRouting` — `{ globalPrefix?, versioning? }`, the
+two `value`s detected above, or any values you supply yourself.
+
+```ts
+import { analyzeControllers, applyApplicationRouting } from '@nestbridge/core';
+
+const { controllers } = analyzeControllers(files);
+const routed = applyApplicationRouting(controllers, {
+  globalPrefix: { prefix: 'api', exclude: [{ path: 'health' }] },
+  versioning: { prefix: 'v', defaultVersion: '1' },
+});
+```
+
 ### `generateErrorBodyDeclaration(errorBodyTypeSource)`
 
 Turns the `errorBodyTypeSource` from `detectErrorResponseShape` into the text
@@ -139,6 +196,11 @@ import { formatDiagnostic, NestBridgeDiagnosticError } from '@nestbridge/core';
 string (file, position, message). `NestBridgeDiagnosticError` wraps one or
 more diagnostics as a thrown `Error`.
 
+A diagnostic's `code` is one of `unsupported-route` (a non-literal route path or
+version), `unsupported-parameter`, `unsupported-argument`,
+`unsupported-return-type`, `circular-type`, `unsupported-global-prefix` and
+`unsupported-versioning`.
+
 ### Types
 
 `ControllerAnalysisResult`, `ControllerDefinition`,
@@ -147,7 +209,8 @@ more diagnostics as a thrown `Error`.
 `ResolverMethodDefinition`, `ResolverArgumentDefinition`, `SelectionField`,
 `GraphqlOperationKind`, `ResponseKind`, `NestBridgeDiagnostic`,
 `NestBridgeDiagnosticCode`, `ResponseWrapperDetection`,
-`ErrorResponseShapeDetection`.
+`ErrorResponseShapeDetection`, `BootstrapDetection`, `GlobalPrefix`,
+`GlobalPrefixExclusion`, `UriVersioning`, `ApplicationRouting`.
 
 ## License
 

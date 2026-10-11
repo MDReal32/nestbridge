@@ -34,6 +34,7 @@ types all work as if you were calling the controller directly.
 - [Why NestJS never reaches the browser](#why-nestjs-never-reaches-the-browser)
 - [Installation](#installation)
 - [Setting up Vite](#setting-up-vite)
+- [Several server apps](#several-server-apps)
 - [Setting up the runtime](#setting-up-the-runtime)
 - [A NestJS controller, unmodified](#a-nestjs-controller-unmodified)
 - [A GraphQL resolver, unmodified](#a-graphql-resolver-unmodified)
@@ -41,6 +42,7 @@ types all work as if you were calling the controller directly.
 - [Supported decorators](#supported-decorators)
 - [Types are projected, not regenerated](#types-are-projected-not-regenerated)
 - [Observables and streamed files](#observables-and-streamed-files)
+- [Global prefix and URI versioning](#global-prefix-and-uri-versioning)
 - [Auto-detected global response wrapper](#auto-detected-global-response-wrapper)
 - [Auto-detected exception filter error body](#auto-detected-exception-filter-error-body)
 - [Unsupported (by design, for this MVP)](#unsupported-by-design-for-this-mvp)
@@ -233,23 +235,122 @@ build and on every dev-server start.
 
 ```ts
 interface NestBridgeOptions {
-  controllers: string | string[]; // glob(s), resolved relative to `root`
-  resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
-  baseURL?: string;                // prefix for REST requests and the default GraphQL endpoint; applied to the runtime automatically
-  debug?: boolean;                 // logs discovery/analysis/watch activity
+  name?: string;                    // names the server app; required, and unique, when you pass several apps
+  controllers: string | string[];   // glob(s), resolved relative to `root`
+  resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
+  baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
+  bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
+  globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
+  versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
+  debug?: boolean;                  // logs discovery/analysis/watch activity
   outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context) — independent of `root`
-  root?: string;                    // base directory for discovering controllers/resolvers and the bootstrap file; defaults to Vite's root, or process.cwd() under webpack
+  root?: string;                    // base directory for this app's controllers, resolvers and bootstrap file; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
+}
+
+interface GlobalPrefixOption {
+  prefix: string;
+  exclude?: (string | { path: string; httpMethod?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' })[];
+}
+
+interface VersioningOption {
+  prefix?: string;                  // defaults to "v"; use "" for none
+  defaultVersion?: string;          // version of routes that state none
 }
 ```
 
+The plugin takes a `NestBridgeOptions` object, or an array of them for
+[several server apps](#several-server-apps).
+
 `baseURL` needs no extra runtime code: when it is set, the plugin generates a
-small module that calls `setNestBridgeBaseURL(baseURL)` from `nestbridge`, and
-every generated controller and resolver module imports it. Leave it out and
-requests go to the bare route path.
+small module that calls `setNestBridgeBaseURL(baseURL)` from `nestbridge` (or
+`setNestBridgeServiceBaseURL(name, baseURL)` for a named app), and every
+generated controller and resolver module imports it. Leave it out and requests
+go to the bare route path.
 
 Using webpack instead of Vite? See [`@nestbridge/webpack`'s README](packages/webpack/README.md)
 for the equivalent setup — same options, same generated output, different
 bundler.
+
+## Several server apps
+
+One client can use controllers from more than one NestJS app. Pass an array,
+one entry per app:
+
+```ts
+// vite.config.ts
+import { resolve } from 'node:path';
+import { defineConfig } from 'vite';
+import nestBridge from 'nestbridge/vite';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@identity': resolve(__dirname, '../identity/src'),
+      '@store': resolve(__dirname, '../store/src'),
+    },
+  },
+  plugins: [
+    nestBridge([
+      {
+        name: 'identity',
+        root: '../identity',
+        controllers: 'src/**/*.controller.ts',
+        baseURL: 'https://identity.example.com',
+      },
+      {
+        name: 'store',
+        root: '../store',
+        controllers: 'src/**/*.controller.ts',
+        baseURL: 'https://store.example.com',
+      },
+    ]),
+  ],
+});
+```
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@identity/*": ["./.nestbridge/identity/src/*"],
+      "@store/*": ["./.nestbridge/store/src/*"]
+    }
+  }
+}
+```
+
+Each entry is a complete, independent app:
+
+- **`name`** is required once there is more than one entry, and must be unique.
+  Start with a letter and use only letters, digits, `-` and `_`. It names the
+  app's *service*: every request that app's controllers and resolvers send
+  carries it, and the runtime uses it to pick the app's origin.
+- **`baseURL`** is registered per service, so `identity` and `store` above talk
+  to different origins. `configureNestBridge({ services })` overrides them at
+  runtime — see [Setting up the runtime](#setting-up-the-runtime).
+- **`root`** should be the server app's folder: the entry's globs, its
+  bootstrap file and the mirrored declaration paths are all relative to it. A
+  relative `root` resolves against Vite's `root` (`process.cwd()` under
+  webpack).
+- **Declarations** are written under `<outputDir>/<name>/`, mirroring each
+  file's path relative to `root` — hence the `paths` entries above. A single
+  app without a `name` keeps the flat layout. The error body declaration moves
+  with them: `<outputDir>/<name>/nestbridge-error-body.d.ts`.
+- **The bootstrap file** is read per app: the one `main.ts` under its `root`,
+  or the file named by `bootstrap`. So one app can register a response
+  interceptor, a global prefix and URI versioning while another has none, and
+  each app's routes, response types and error body come from its own.
+- **A controller or resolver file belongs to one app.** When two entries' globs
+  match the same file, the build fails (a warning in watch mode) and names
+  both apps.
+
+A single app is still a plain object, and an existing config keeps working —
+the one change to check is the global prefix, see
+[Global prefix and URI versioning](#global-prefix-and-uri-versioning) and
+[`MIGRATION.md`](MIGRATION.md).
+
+Apps are declared statically in the plugin options. NestBridge does not
+discover them, and does not run their bootstrap code.
 
 ## Setting up the runtime
 
@@ -274,7 +375,8 @@ everything you need rather than multiple times with partial options.
 
 ```ts
 interface NestBridgeConfig {
-  graphqlEndpoint?: string; // defaults to `${baseURL}/graphql`
+  graphqlEndpoint?: string | Record<string, string>; // defaults to `${baseURL}/graphql`; a record gives one endpoint per app name
+  services?: Record<string, string>; // origin per app name; wins over the plugin's `baseURL` for that app
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   fetch?: typeof globalThis.fetch;
 }
@@ -285,6 +387,23 @@ The plugin sets it for you; to set or clear it yourself, call
 `setNestBridgeBaseURL('/api')` (or `setNestBridgeBaseURL(undefined)`). When
 `graphqlEndpoint` is relative and the code runs in a browser, it is resolved
 against `location.origin`.
+
+With [several server apps](#several-server-apps) the plugin registers each app's
+`baseURL` under the app's name instead, and `services` overrides those at
+runtime — handy when the origins differ per environment:
+
+```ts
+configureNestBridge({
+  services: {
+    identity: import.meta.env.VITE_IDENTITY_URL,
+    store: import.meta.env.VITE_STORE_URL,
+  },
+});
+```
+
+A request's origin is the first of: `services[name]`, the plugin's `baseURL` for
+that app, the global `setNestBridgeBaseURL()` value, and otherwise none (the
+bare path).
 
 REST requests behave as follows: query objects are serialized with
 `URLSearchParams` (`undefined` and `null` values are skipped, arrays repeat the
@@ -409,7 +528,8 @@ unexpected constructor argument) resolve exactly as the architecture promises.
 
 | Decorator | Server meaning | Client behavior |
 | --- | --- | --- |
-| `@Controller(path?)` | Base path | Prefixed onto every method path |
+| `@Controller(path?)` / `@Controller({ path?, version? })` | Base path and version | Prefixed onto every method path; the version joins the URL when URI versioning is enabled |
+| `@Version(version)` | Version of one route | Replaces the controller's version for that method |
 | `@Get` / `@Post` / `@Put` / `@Patch` / `@Delete` | HTTP method + path | `request({ method, path })` |
 | `@Param('name')` | Route parameter | Interpolated into the path, `encodeURIComponent`-escaped |
 | `@Query('name')` | Named query parameter | Merged into the `query` object |
@@ -427,8 +547,8 @@ GraphQL resolvers:
 | `@Mutation(() => Type, { name? })` | Mutation operation, name, return type | Same, with a `mutation` document |
 | `@Args('name')` | Named GraphQL variable | Declared as `$name: <GraphQLType>` and passed as a request variable |
 
-Route paths, operation names, and decorator arguments must all be static
-string literals (`@Get(':id')`, not `@Get(createRoute())`) — NestBridge only
+Route paths, versions, operation names, and decorator arguments must all be
+static string literals (`@Get(':id')`, not `@Get(createRoute())`) — NestBridge only
 analyzes source text, it never executes your code.
 
 ## Types are projected, not regenerated
@@ -513,11 +633,80 @@ annotation the method is treated as a plain JSON response. An `Observable` is
 treated as a single JSON body — streams of server-sent events are not
 supported.
 
+## Global prefix and URI versioning
+
+NestBridge builds each request path the way Nest builds the route:
+
+```text
+[global prefix] [/<version prefix><version>] [controller path] [method path]
+```
+
+The controller path and the version come from the controller itself
+(`@Controller('users')`, `@Controller({ path: 'users', version: '1' })`,
+`@Version('2')`). The global prefix and the versioning setup live in the app's
+bootstrap file, which NestBridge reads statically:
+
+```ts
+// main.ts
+app.setGlobalPrefix('api/identity', { exclude: ['health'] });
+app.enableVersioning({ type: VersioningType.URI });
+```
+
+With that bootstrap, `@Controller({ path: 'users', version: '2' })` with
+`@Get(':id')` is called at `/api/identity/v2/users/:id`, a controller with no
+version at `/api/identity/...`, and a `health` route stays at `/health` because
+it is excluded from the prefix. An excluded route skips only the prefix; it
+still carries its version.
+
+The bootstrap file is the one `main.ts` under `root` (ignoring `node_modules`
+and `outputDir`; with none, or more than one, nothing is detected), or the file
+named by the `bootstrap` option. What is read:
+
+| In the source | Read as |
+| --- | --- |
+| `setGlobalPrefix('api')` | the prefix |
+| `setGlobalPrefix('api', { exclude })` | routes the prefix skips: string paths (every method) and `{ path, method: RequestMethod.GET }` (`RequestMethod.ALL` is every method); `:param` and trailing `*` segments match |
+| `enableVersioning({ type: VersioningType.URI })` | a `v<version>` segment |
+| `prefix: 'api-v'` / `prefix: false` | another version prefix / none |
+| `defaultVersion: '1'` | the version of routes that state none (an array uses its first entry; `VERSION_NEUTRAL` means none) |
+| `@Controller({ version })` and `@Version(...)` | route versions: the method's `@Version` wins over the controller's; an array uses its first entry; `VERSION_NEUTRAL` adds no segment |
+
+This is a "never guess" analysis. A controller or method version that is not a
+string literal is an `unsupported-route` diagnostic, like a computed route path.
+In the bootstrap file, a prefix or default version that is not a literal, a call
+that is conditional or made more than once, an exclusion it cannot read, and
+header or media-type versioning (`VersioningType.HEADER` / `MEDIA_TYPE`, which
+need request headers NestBridge does not set) each produce an
+`unsupported-global-prefix` or `unsupported-versioning` diagnostic instead of a
+URL that might be wrong. Write the value as a literal, or state it in the plugin
+options:
+
+```ts
+nestBridge({
+  controllers: '../server/src/**/*.controller.ts',
+  globalPrefix: { prefix: 'api', exclude: ['health'] }, // or just 'api'
+  versioning: { prefix: 'v', defaultVersion: '1' },
+});
+```
+
+An explicit option replaces detection for that setting, and its diagnostics.
+`false` ignores whatever the bootstrap file does.
+
+Keep `baseURL` to the origin, or to the path where a proxy mounts the server;
+the prefix and the version are added from the bootstrap file, so putting them
+in `baseURL` as well repeats them in every URL.
+
+Two things are not modeled. `RouterModule` module paths are not read, so a
+module mounted under a `RouterModule` path needs that path in its
+controller's `@Controller` path. And a GraphQL endpoint is not given the global
+prefix, which Nest only applies to it with `useGlobalPrefix`: set
+`graphqlEndpoint` in `configureNestBridge()` when the endpoint is not
+`baseURL` + `/graphql`.
+
 ## Auto-detected global response wrapper
 
-Both auto-detected features below read your app's bootstrap file: NestBridge
-looks for exactly one `main.ts` under `root` (ignoring `node_modules` and
-`outputDir`). With none, or more than one, nothing is detected.
+Both auto-detected features below read the app's bootstrap file, found as
+described in [Global prefix and URI versioning](#global-prefix-and-uri-versioning).
 
 If your app registers a global interceptor —
 
@@ -597,7 +786,8 @@ class HttpExceptionFilter implements ExceptionFilter {
 ```
 
 NestBridge statically detects the shape of that response body and writes it
-to a fixed declaration file, `<outputDir>/nestbridge-error-body.d.ts`,
+to a fixed declaration file, `<outputDir>/nestbridge-error-body.d.ts`
+(`<outputDir>/<name>/nestbridge-error-body.d.ts` for a named app),
 exporting a `NestBridgeErrorBody` type:
 
 ```ts
@@ -660,8 +850,14 @@ REST controllers (each of these produces a diagnostic):
   parameter decorators and destructured parameters
 - a bare `@Param()` or `@Headers()` — both need a name
 - runtime-computed controller or route paths
+- runtime-computed controller or method versions
+- `setGlobalPrefix()` and `enableVersioning()` calls that are not literal,
+  unconditional and unique, and header or media-type versioning (diagnosed as
+  `unsupported-global-prefix` / `unsupported-versioning`; each has an explicit
+  plugin option)
 
-Not supported, and not diagnosed: Server-Sent Events (`@Sse()`) and WebSockets.
+Not supported, and not diagnosed: Server-Sent Events (`@Sse()`), WebSockets and
+`RouterModule` module paths.
 
 GraphQL resolvers (each of these produces a diagnostic):
 
@@ -839,11 +1035,13 @@ This is an intentionally small MVP:
   `request()`/`graphqlRequest()`'s public contract.
 - No request/response interceptors beyond global + per-request headers and a
   custom `fetch` implementation.
-- `NestBridgeOptions.baseURL` configures only the runtime's base URL (and the
-  default GraphQL endpoint). Headers, `fetch` and an explicit
-  `graphqlEndpoint` stay with `configureNestBridge`, which the plugin never
-  touches — it keeps the base URL in separate state precisely so that
-  `configureNestBridge`'s replace-the-whole-config behavior cannot overwrite
-  it.
+- `NestBridgeOptions.baseURL` configures only the runtime's base URL for its app
+  (and the default GraphQL endpoint). Headers, `fetch`, an explicit
+  `graphqlEndpoint` and the runtime `services` overrides stay with
+  `configureNestBridge`, which the plugin never touches — it keeps the base URLs
+  in separate state precisely so that `configureNestBridge`'s
+  replace-the-whole-config behavior cannot overwrite them.
+- Several server apps are declared statically in the plugin options; NestBridge
+  does not discover them or run their bootstrap code.
 - Declarations are files on disk, regenerated on `buildStart` and on
   controller change — there's no separate "watch types only" mode.

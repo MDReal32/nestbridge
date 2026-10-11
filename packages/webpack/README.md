@@ -79,24 +79,75 @@ the project root automatically, so it defaults to `process.cwd()`. Pass an
 explicit `root` if `webpack.config.js` runs from somewhere other than the
 directory your `controllers`/`resolvers` globs are relative to.
 
+## Several server apps
+
+To use controllers from more than one NestJS app, pass an array — one entry per
+app. Each entry needs a `name`, and its `root` should be that app's folder:
+
+```js
+nestBridge([
+  {
+    name: 'identity',
+    root: '../identity',
+    controllers: 'src/**/*.controller.ts',
+    baseURL: 'https://identity.example.com',
+  },
+  {
+    name: 'store',
+    root: '../store',
+    controllers: 'src/**/*.controller.ts',
+    baseURL: 'https://store.example.com',
+  },
+]);
+```
+
+A relative `root` resolves against `process.cwd()`. Declarations land in
+`<outputDir>/<name>/`, so add one `resolve.alias` and one `paths` entry per app
+(`"@identity/*": ["./.nestbridge/identity/src/*"]`), and each app keeps its own
+`baseURL`, bootstrap file, global prefix and versioning. See
+[Several server apps](../../README.md#several-server-apps) in the repository
+README, and [`MIGRATION.md`](../../MIGRATION.md) when upgrading from 2.1.
+
 ## `NestBridgeOptions`
 
 ```ts
 interface NestBridgeOptions {
-  controllers: string | string[]; // glob(s), resolved relative to `root`
-  resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
-  baseURL?: string;                // prefix for REST requests and the default GraphQL endpoint; applied to the runtime automatically
-  debug?: boolean;                 // logs discovery/analysis/watch activity
+  name?: string;                    // names the server app; required, and unique, when you pass several apps
+  controllers: string | string[];   // glob(s), resolved relative to `root`
+  resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
+  baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
+  bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
+  globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
+  versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
+  debug?: boolean;                  // logs discovery/analysis/watch activity
   outputDir?: string;               // defaults to ".nestbridge", resolved from webpack's `context` — independent of `root`
-  root?: string;                    // defaults to process.cwd()
+  root?: string;                    // base for discovering controllers/resolvers and the bootstrap file; relative paths resolve against process.cwd(), which is also the default
+}
+
+interface GlobalPrefixOption {
+  prefix: string;
+  exclude?: (string | { path: string; httpMethod?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' })[];
+}
+
+interface VersioningOption {
+  prefix?: string;                  // defaults to "v"; use "" for none
+  defaultVersion?: string;          // version of routes that state none
 }
 ```
 
+`nestBridge()` takes a `NestBridgeOptions` object, or an array of them
+(`NestBridgePluginOptions`). All of these types are exported.
+
 `baseURL` needs no extra runtime code: the plugin generates a module that
-calls `setNestBridgeBaseURL(baseURL)` from `nestbridge`, and every generated
-controller and resolver module imports it. Use `configureNestBridge` from
-`nestbridge` only for headers, a custom `fetch`, or an explicit
-`graphqlEndpoint`.
+calls `setNestBridgeBaseURL(baseURL)` from `nestbridge` (or
+`setNestBridgeServiceBaseURL(name, baseURL)` for a named app), and every
+generated controller and resolver module imports it. Use `configureNestBridge`
+from `nestbridge` only for headers, a custom `fetch`, an explicit
+`graphqlEndpoint`, or per-environment `services` origins.
+
+The global prefix and URI versioning that the app's bootstrap file sets are
+read statically and added to every request path, so keep `baseURL` to the
+origin — see [Global prefix and URI versioning](../../README.md#global-prefix-and-uri-versioning).
 
 ## License
 

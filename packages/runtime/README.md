@@ -44,11 +44,16 @@ than merging, so pass everything you need in one call.
 
 ```ts
 interface NestBridgeConfig {
-  graphqlEndpoint?: string; // defaults to `${baseURL}/graphql`
+  graphqlEndpoint?: string | Record<string, string>; // defaults to `${baseURL}/graphql`; a record gives one endpoint per app name
+  services?: Record<string, string>; // origin per app name; wins over the plugin's `baseURL` for that app
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   fetch?: typeof globalThis.fetch;
 }
 ```
+
+A string `graphqlEndpoint` applies to every GraphQL request. A record is keyed
+by the `name` of a server app; an app without an entry uses its own origin plus
+`/graphql`.
 
 ## `setNestBridgeBaseURL()`
 
@@ -58,6 +63,35 @@ option is set, the plugin generates a module that calls
 `setNestBridgeBaseURL(baseURL)` for you. You can also call it yourself;
 `setNestBridgeBaseURL(undefined)` clears it. A relative `graphqlEndpoint` is
 resolved against `location.origin` when running in a browser.
+
+## `setNestBridgeServiceBaseURL()`
+
+When the plugin is given [several server apps](../../README.md#several-server-apps),
+every generated request carries the `name` of the app it belongs to — its
+`service` — and each app registers its own origin:
+`setNestBridgeServiceBaseURL('identity', 'https://identity.example.com')`. The
+plugin generates those calls from each entry's `baseURL`; call it yourself to
+register or replace an origin, and pass `undefined` as the second argument to
+remove one.
+
+The origin of a request is the first of these that is set:
+
+1. `services[service]` from `configureNestBridge`
+2. the origin registered with `setNestBridgeServiceBaseURL(service, ...)`
+3. the global `setNestBridgeBaseURL()` value
+4. none — the request goes to the bare route path
+
+A request without a `service` (a single unnamed app) uses only the last two.
+`services` is the place to pick origins per environment:
+
+```ts
+configureNestBridge({
+  services: {
+    identity: import.meta.env.VITE_IDENTITY_URL,
+    store: import.meta.env.VITE_STORE_URL,
+  },
+});
+```
 
 ## `request()`
 
@@ -115,9 +149,10 @@ try {
 ## Types
 
 - `NestBridgeConfig` — the shape passed to `configureNestBridge`.
-- `NestBridgeRequest` — the shape of a single generated REST request.
+- `NestBridgeRequest` — the shape of a single generated REST request, with an
+  optional `service` naming the server app it belongs to.
 - `NestBridgeGraphqlRequest` — the shape of a single generated GraphQL
-  request (`document` + optional `variables`).
+  request (`document` + optional `variables` and `service`).
 - `RemoteMethod<T>` / `RemoteResult<T>` — the type-level helpers that project
   a real controller or resolver method's parameters and return type onto its
   generated client method. Useful outside code generation too — a manual SDK
