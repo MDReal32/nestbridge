@@ -1,82 +1,49 @@
-import { resolve } from 'node:path';
-import {
-  detectErrorResponseShape,
-  detectResponseWrapper,
-  formatDiagnostic,
-  type NestBridgeDiagnostic,
-} from '@nestbridge/core';
 import { createUnplugin, type UnpluginInstance, type UnpluginOptions } from 'unplugin';
-import { generateConfigModule, generateControllerModule, generateResolverModule } from '../codegen';
-import {
-  writeControllerDeclarations,
-  writeErrorBodyDeclaration,
-  writeResolverDeclarations,
-} from '../declarations';
-import { discoverBootstrapFile, discoverFiles } from '../discovery';
-import { type NestBridgeOptions, resolveNestBridgeOptions } from '../options';
+import { generateConfigModule } from '../codegen';
+import { type NestBridgePluginOptions, resolveNestBridgeOptions } from '../options';
 import { CONFIG_VIRTUAL_MODULE_ID, RESOLVED_CONFIG_VIRTUAL_MODULE_ID } from '../virtual-modules';
-import { createControllerRegistry } from './controller-registry';
+import { findOverlappingFiles } from './find-overlapping-files';
+import { createNestBridgeApp, type NestBridgeApp } from './nestbridge-app';
 import { normalizePath } from './normalize-path';
-import { createResolverRegistry } from './resolver-registry';
+import { reportDiagnostics } from './report-diagnostics';
+import { reportMessages } from './report-messages';
 
-const reportDiagnostics = (
-  diagnostics: readonly NestBridgeDiagnostic[],
-  watchMode: boolean | undefined,
-) => {
-  for (const diagnostic of diagnostics) {
-    const message = formatDiagnostic(diagnostic);
-
-    if (watchMode === false) {
-      throw new Error(message);
-    }
-
-    console.warn(message);
-  }
-};
-
-export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = createUnplugin<
-  NestBridgeOptions,
+export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false> = createUnplugin<
+  NestBridgePluginOptions,
   false
 >((options, meta) => {
-  const resolvedOptions = resolveNestBridgeOptions(options);
+  const entries = resolveNestBridgeOptions(options);
 
-  let root = resolvedOptions.root ?? process.cwd();
-  let bundlerRoot = root;
-  let controllerRegistry: ReturnType<typeof createControllerRegistry>;
-  let resolverRegistry: ReturnType<typeof createResolverRegistry>;
-  let bootstrapFilePath: string | undefined;
+  let baseRoot = process.cwd();
+  let bundlerRoot: string | undefined;
+  let apps: NestBridgeApp[] = [];
 
-  const log = (message: string) => {
-    if (resolvedOptions.debug) {
-      console.log(`[nestbridge] ${message}`);
+  const log = (app: NestBridgeApp, message: string) => {
+    if (app.options.debug) {
+      const prefix = app.options.name === undefined ? '' : `${app.options.name}: `;
+      console.log(`[nestbridge] ${prefix}${message}`);
     }
   };
 
-  const runAnalysis = () => {
-    const { controllers, diagnostics: controllerDiagnostics } = controllerRegistry.refresh();
-    const { resolvers, diagnostics: resolverDiagnostics } = resolverRegistry.refresh();
+  const analyzeApps = (targets: readonly NestBridgeApp[]) => {
+    for (const app of targets) {
+      const { controllerCount, resolverCount, diagnostics, problems } = app.analyze();
 
-    reportDiagnostics([...controllerDiagnostics, ...resolverDiagnostics], meta.watchMode);
+      reportMessages(
+        problems.map((problem) => `[nestbridge] ${problem}`),
+        meta.watchMode,
+      );
+      reportDiagnostics(diagnostics, meta.watchMode);
+      log(
+        app,
+        `analyzed ${controllerCount} controller(s), ${resolverCount} resolver(s), ` +
+          `${diagnostics.length} diagnostic(s)`,
+      );
+    }
 
-    const resolvedOutputDir = resolve(bundlerRoot, resolvedOptions.outputDir);
-    const discoveredBootstrapFile = discoverBootstrapFile(root, resolvedOutputDir);
-    bootstrapFilePath =
-      discoveredBootstrapFile !== undefined ? normalizePath(discoveredBootstrapFile) : undefined;
-    const responseWrapper =
-      discoveredBootstrapFile !== undefined
-        ? detectResponseWrapper(discoveredBootstrapFile)
-        : undefined;
-    const errorResponseShape =
-      discoveredBootstrapFile !== undefined
-        ? detectErrorResponseShape(discoveredBootstrapFile)
-        : undefined;
-
-    writeControllerDeclarations(controllers, root, resolvedOutputDir, responseWrapper);
-    writeResolverDeclarations(resolvers, root, resolvedOutputDir);
-    writeErrorBodyDeclaration(resolvedOutputDir, errorResponseShape);
-    log(
-      `analyzed ${controllers.length} controller(s), ${resolvers.length} resolver(s), ` +
-        `${controllerDiagnostics.length + resolverDiagnostics.length} diagnostic(s)`,
+    reportMessages(
+      findOverlappingFiles(apps).map((problem) => `[nestbridge] ${problem}`),
+      meta.watchMode,
     );
   };
 
@@ -85,9 +52,8 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
     enforce: 'pre',
 
     buildStart() {
-      controllerRegistry = createControllerRegistry(resolvedOptions.controllers, root);
-      resolverRegistry = createResolverRegistry(resolvedOptions.resolvers, root);
-      runAnalysis();
+      apps = entries.map((entry) => createNestBridgeApp(entry, { baseRoot, bundlerRoot }));
+      analyzeApps(apps);
     },
 
     resolveId(source) {
@@ -100,7 +66,7 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
 
     load(id) {
       if (id === RESOLVED_CONFIG_VIRTUAL_MODULE_ID) {
-        return generateConfigModule(resolvedOptions);
+        return generateConfigModule(entries);
       }
 
       return null;
@@ -109,14 +75,12 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
     transform(_code, id) {
       const absolutePath = normalizePath(id);
 
-      const controller = controllerRegistry.get(absolutePath);
-      if (controller !== undefined) {
-        return generateControllerModule(controller);
-      }
+      for (const app of apps) {
+        const code = app.transform(absolutePath);
 
-      const resolver = resolverRegistry.get(absolutePath);
-      if (resolver !== undefined) {
-        return generateResolverModule(resolver);
+        if (code !== undefined) {
+          return code;
+        }
       }
 
       return null;
@@ -124,34 +88,22 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgeOptions, false> = cr
 
     watchChange(id) {
       const changedFile = normalizePath(id);
-      const wasTracked =
-        controllerRegistry.has(changedFile) ||
-        resolverRegistry.has(changedFile) ||
-        changedFile === bootstrapFilePath;
-      const discoveredBootstrapFile = discoverBootstrapFile(
-        root,
-        resolve(bundlerRoot, resolvedOptions.outputDir),
-      );
-      const isTrackedNow =
-        discoverFiles(resolvedOptions.controllers, root).map(normalizePath).includes(changedFile) ||
-        discoverFiles(resolvedOptions.resolvers, root).map(normalizePath).includes(changedFile) ||
-        (discoveredBootstrapFile !== undefined &&
-          normalizePath(discoveredBootstrapFile) === changedFile);
+      const affectedApps = apps.filter((app) => app.isAffectedBy(changedFile));
 
-      if (!wasTracked && !isTrackedNow) {
+      if (affectedApps.length === 0) {
         return;
       }
 
-      runAnalysis();
-      log(`nestbridge source changed: ${changedFile}`);
+      analyzeApps(affectedApps);
+
+      for (const app of affectedApps) {
+        log(app, `nestbridge source changed: ${changedFile}`);
+      }
     },
 
     vite: {
       configResolved(config) {
-        if (resolvedOptions.root === undefined) {
-          root = config.root;
-        }
-
+        baseRoot = config.root;
         bundlerRoot = config.root;
       },
     },

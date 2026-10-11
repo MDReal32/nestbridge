@@ -30,6 +30,18 @@ describe('generateControllerModule', () => {
     expect(code).toContain('constructor() {}');
   });
 
+  it('tags every request with the service when one is given', () => {
+    const code = generateControllerModule(controller([method({})]), 'identity');
+
+    expect(code).toContain('service: "identity"');
+  });
+
+  it('leaves requests untagged when no service is given', () => {
+    const code = generateControllerModule(controller([method({})]));
+
+    expect(code).not.toContain('service:');
+  });
+
   it('imports the config virtual module so the resolved baseURL is applied', () => {
     const code = generateControllerModule(controller([]));
 

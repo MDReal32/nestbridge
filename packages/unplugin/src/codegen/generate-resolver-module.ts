@@ -19,8 +19,12 @@ const generateVariablesExpression = (resolverArguments: readonly ResolverArgumen
   return `{ ${entries.join(', ')} }`;
 };
 
-const generateMethod = (method: ResolverMethodDefinition) => {
+const generateMethod = (method: ResolverMethodDefinition, service: string | undefined) => {
   const requestProperties = [`document: ${JSON.stringify(generateGraphqlDocument(method))}`];
+
+  if (service !== undefined) {
+    requestProperties.push(`service: ${JSON.stringify(service)}`);
+  }
 
   const variablesExpression = generateVariablesExpression(method.arguments);
   if (variablesExpression !== undefined) {
@@ -38,8 +42,8 @@ const generateMethod = (method: ResolverMethodDefinition) => {
   ].join('\n');
 };
 
-export const generateResolverModule = (resolver: ResolverDefinition) => {
-  const methods = resolver.methods.map(generateMethod).join('\n\n');
+export const generateResolverModule = (resolver: ResolverDefinition, service?: string) => {
+  const methods = resolver.methods.map((method) => generateMethod(method, service)).join('\n\n');
 
   return [
     `import '${CONFIG_VIRTUAL_MODULE_ID}';`,

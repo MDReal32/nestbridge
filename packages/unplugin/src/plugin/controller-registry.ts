@@ -1,5 +1,7 @@
 import {
+  type ApplicationRouting,
   analyzeControllers,
+  applyApplicationRouting,
   type ControllerDefinition,
   type NestBridgeDiagnostic,
 } from '@nestbridge/core';
@@ -12,7 +14,7 @@ export interface ControllerRegistryRefreshResult {
 }
 
 export interface ControllerRegistry {
-  refresh: () => ControllerRegistryRefreshResult;
+  refresh: (routing?: ApplicationRouting) => ControllerRegistryRefreshResult;
   get: (filePath: string) => ControllerDefinition | undefined;
   has: (filePath: string) => boolean;
   all: () => ControllerDefinition[];
@@ -24,11 +26,12 @@ export const createControllerRegistry = (
 ): ControllerRegistry => {
   const controllersByFile = new Map<string, ControllerDefinition>();
 
-  const refresh = () => {
+  const refresh = (routing: ApplicationRouting = {}) => {
     controllersByFile.clear();
 
     const files = discoverFiles(patterns, root);
-    const { controllers, diagnostics } = analyzeControllers(files);
+    const { controllers: analyzed, diagnostics } = analyzeControllers(files);
+    const controllers = applyApplicationRouting(analyzed, routing);
 
     for (const controller of controllers) {
       controllersByFile.set(normalizePath(controller.sourceFile), controller);

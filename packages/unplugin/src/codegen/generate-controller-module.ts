@@ -6,11 +6,15 @@ import { generateParameterList } from './generate-parameter-list';
 import { generatePathExpression } from './generate-path-expression';
 import { generateQueryExpression } from './generate-query-expression';
 
-const generateMethod = (method: ControllerMethodDefinition) => {
+const generateMethod = (method: ControllerMethodDefinition, service: string | undefined) => {
   const requestProperties = [
     `method: ${JSON.stringify(method.httpMethod)}`,
     `path: ${generatePathExpression(method)}`,
   ];
+
+  if (service !== undefined) {
+    requestProperties.push(`service: ${JSON.stringify(service)}`);
+  }
 
   const queryExpression = generateQueryExpression(method.parameters);
   if (queryExpression !== undefined) {
@@ -40,8 +44,8 @@ const generateMethod = (method: ControllerMethodDefinition) => {
   ].join('\n');
 };
 
-export const generateControllerModule = (controller: ControllerDefinition) => {
-  const methods = controller.methods.map(generateMethod).join('\n\n');
+export const generateControllerModule = (controller: ControllerDefinition, service?: string) => {
+  const methods = controller.methods.map((method) => generateMethod(method, service)).join('\n\n');
 
   return [
     `import '${CONFIG_VIRTUAL_MODULE_ID}';`,

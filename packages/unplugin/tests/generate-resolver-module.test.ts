@@ -29,6 +29,18 @@ describe('generateResolverModule', () => {
     expect(code).toContain('constructor() {}');
   });
 
+  it('tags every GraphQL request with the service when one is given', () => {
+    const code = generateResolverModule(resolver([method({})]), 'store');
+
+    expect(code).toContain('service: "store"');
+  });
+
+  it('leaves GraphQL requests untagged when no service is given', () => {
+    const code = generateResolverModule(resolver([method({})]));
+
+    expect(code).not.toContain('service:');
+  });
+
   it('imports the config virtual module so the resolved baseURL is applied', () => {
     const code = generateResolverModule(resolver([]));
 

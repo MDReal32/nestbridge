@@ -1,33 +1,30 @@
+import type { GlobalPrefixOption } from './global-prefix-option';
+import type { VersioningOption } from './versioning-option';
+
 export interface NestBridgeOptions {
+  /**
+   * Identifies the server app. Required, and unique, when several apps are
+   * configured. It also names the runtime service and the declaration folder.
+   */
+  name?: string;
   controllers: string | string[];
   resolvers?: string | string[];
   baseURL?: string;
+  /**
+   * The app's bootstrap file, relative to `root`. Skips the `main.ts` search.
+   */
+  bootstrap?: string;
+  /**
+   * Replaces what `setGlobalPrefix()` in the bootstrap file would detect.
+   * `false` ignores the bootstrap file's prefix.
+   */
+  globalPrefix?: string | GlobalPrefixOption | false;
+  /**
+   * Replaces what `enableVersioning()` in the bootstrap file would detect.
+   * `false` ignores the bootstrap file's versioning.
+   */
+  versioning?: VersioningOption | false;
   debug?: boolean;
   outputDir?: string;
   root?: string;
 }
-
-export interface ResolvedNestBridgeOptions {
-  controllers: string[];
-  resolvers: string[];
-  baseURL: string | undefined;
-  debug: boolean;
-  outputDir: string;
-  root: string | undefined;
-}
-
-export const resolveNestBridgeOptions = (
-  options: NestBridgeOptions,
-): ResolvedNestBridgeOptions => ({
-  controllers: Array.isArray(options.controllers) ? options.controllers : [options.controllers],
-  resolvers:
-    options.resolvers === undefined
-      ? []
-      : Array.isArray(options.resolvers)
-        ? options.resolvers
-        : [options.resolvers],
-  baseURL: options.baseURL,
-  debug: options.debug ?? false,
-  outputDir: options.outputDir ?? '.nestbridge',
-  root: options.root,
-});
