@@ -1,5 +1,21 @@
 # @nestbridge/unplugin
 
+## 2.4.0
+
+### Minor Changes
+
+- 2f13b42: Add per-call cancellation. Every generated controller and resolver method now returns an `AbortablePromise` — a regular `Promise` with an `abort(reason?)` method — so `new UsersController().findOne(id).abort()` cancels that call. Aborting aborts the underlying `fetch` and rejects the call with an `AbortError` (or the reason you pass); it is per call, does nothing once the call has settled, and rejects even when a custom `fetch` ignores the signal. An aborted call that nobody awaits raises no unhandled rejection. Aborts are not `NestBridgeError`s.
+  
+  `request()` and `graphqlRequest()` return the `AbortablePromise` and pass their `signal` to `fetch`. `graphqlRequest()` gains a `field` option that resolves with one root field of the response `data`; generated resolver methods use it instead of an `async` wrapper, which would have dropped `abort()`. `RemoteResult`, `RemoteObservableResult`, `RemoteStreamResult` and the generated wrapped-result alias resolve through `AbortablePromise`, which is exported as a type. It is a `Promise` subtype, so existing code that awaits calls keeps working.
+- bb0f3a9: Add a `logLevel` plugin option (`'info' | 'warn' | 'error' | 'silent'`, the same values as Vite's) to quiet NestBridge's output, for example the watch-mode diagnostics that are logged as warnings so the dev server keeps running. `'error'` and `'silent'` hide those warnings, and `'warn'` and below hide `debug` messages. The level is set per app, and an unknown value fails with an explicit error. The `NestBridgeLogLevel` type is exported.
+  
+  The plugin now reports through the bundler's own logger instead of the console — Vite's `config.logger` and webpack's infrastructure logger — so Vite's `logLevel` and `customLogger`, and webpack's `infrastructureLogging.level`, apply to NestBridge without any option. Other bundlers still use the console. Diagnostics that fail a one-shot build are thrown and are not affected by the level.
+
+### Patch Changes
+
+- Updated dependencies [2f13b42]
+  - @nestbridge/core@2.4.0
+
 ## 2.3.0
 
 ### Minor Changes
