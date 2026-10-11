@@ -110,6 +110,10 @@ class NestBridgeError<T = unknown> extends Error {
 }
 ```
 
+`request()` returns an `AbortablePromise`: a `Promise` with an `abort(reason?)`
+method that aborts the `fetch` and rejects with an `AbortError` (or `reason`).
+See [Cancelling a call](../../README.md#cancelling-a-call).
+
 ## `graphqlRequest()`
 
 Generated resolver modules call `graphqlRequest()` directly; you won't
@@ -124,6 +128,11 @@ class NestBridgeGraphqlError extends Error {
   readonly data: unknown;
 }
 ```
+
+`graphqlRequest()` returns an `AbortablePromise` too. When the request sets
+`field`, it resolves with that root field of the response `data` instead of the
+whole `data` object — generated resolver methods use it, so `abort()` reaches
+the caller unchanged.
 
 ## `isNestBridgeError()`
 
@@ -152,14 +161,17 @@ try {
 - `NestBridgeRequest` — the shape of a single generated REST request, with an
   optional `service` naming the server app it belongs to.
 - `NestBridgeGraphqlRequest` — the shape of a single generated GraphQL
-  request (`document` + optional `variables` and `service`).
+  request (`document` + optional `variables`, `field` and `service`).
+- `AbortablePromise<T>` — the `Promise<T>` with an `abort(reason?)` method that
+  every call returns.
 - `RemoteMethod<T>` / `RemoteResult<T>` — the type-level helpers that project
   a real controller or resolver method's parameters and return type onto its
   generated client method. Useful outside code generation too — a manual SDK
   wrapper, a mock, a test double.
 - `RemoteObservableResult<T>` / `RemoteStreamResult<T>` — the helpers used for
   methods declared to return an `Observable<T>` (resolves with `T`) or a
-  `StreamableFile` (resolves with a `Blob`).
+  `StreamableFile` (resolves with a `Blob`). All three resolve through an
+  `AbortablePromise`.
 
 ## License
 

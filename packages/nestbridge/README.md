@@ -91,6 +91,7 @@ runtime/plugin surface.
 - [Supported decorators](#supported-decorators)
 - [Types are projected, not regenerated](#types-are-projected-not-regenerated)
 - [Observables and streamed files](#observables-and-streamed-files)
+- [Cancelling a call](#cancelling-a-call)
 - [Global prefix and URI versioning](#global-prefix-and-uri-versioning)
 - [Auto-detected global response wrapper](#auto-detected-global-response-wrapper)
 - [Auto-detected exception filter error body](#auto-detected-exception-filter-error-body)
@@ -491,9 +492,9 @@ class NestBridgeGraphqlError extends Error {
 - values: `configureNestBridge`, `setNestBridgeBaseURL`, `request`,
   `graphqlRequest`, `isNestBridgeError`, `NestBridgeError`,
   `NestBridgeGraphqlError`, `VERSION`
-- types: `NestBridgeConfig`, `NestBridgeRequest`, `NestBridgeGraphqlRequest`,
-  `RemoteMethod`, `RemoteResult`, `RemoteObservableResult`,
-  `RemoteStreamResult`
+- types: `AbortablePromise`, `NestBridgeConfig`, `NestBridgeRequest`,
+  `NestBridgeGraphqlRequest`, `RemoteMethod`, `RemoteResult`,
+  `RemoteObservableResult`, `RemoteStreamResult`
 
 ## A NestJS controller, unmodified
 
@@ -611,7 +612,7 @@ from TypeScript's own `Parameters<T>` plus a `RemoteResult<T>` helper:
 
 ```ts
 type RemoteResult<T> = T extends (...args: never[]) => infer Result
-  ? Promise<Awaited<Result>>
+  ? AbortablePromise<Awaited<Result>>
   : never;
 ```
 
@@ -674,15 +675,62 @@ generated declaration:
 
 | Declared return type | Helper | Client resolves with |
 | --- | --- | --- |
-| `Observable<T>` / `Promise<Observable<T>>` | `RemoteObservableResult` | `Promise<T>` — the response body, not an `Observable` |
-| `StreamableFile` | `RemoteStreamResult` | `Promise<Blob>`; the request is sent with `responseType: 'blob'` |
-| anything else | `RemoteResult` | the awaited return type |
+| `Observable<T>` / `Promise<Observable<T>>` | `RemoteObservableResult` | `AbortablePromise<T>` — the response body, not an `Observable` |
+| `StreamableFile` | `RemoteStreamResult` | `AbortablePromise<Blob>`; the request is sent with `responseType: 'blob'` |
+| anything else | `RemoteResult` | `AbortablePromise` of the awaited return type |
 
 Classification reads the method's *explicit* return type annotation, matched by
 name, so annotate `Observable<T>` or `StreamableFile` on the method. Without an
 annotation the method is treated as a plain JSON response. An `Observable` is
 treated as a single JSON body — streams of server-sent events are not
 supported.
+
+## Cancelling a call
+
+Every generated method returns an `AbortablePromise` — an ordinary `Promise`
+with an `abort()` method — so a call can be cancelled without any setup:
+
+```ts
+const users = new UsersController();
+
+const pending = users.findOne(id);
+
+cancelButton.addEventListener('click', () => pending.abort());
+
+try {
+  const user = await pending;
+} catch (error) {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return;
+  }
+
+  throw error;
+}
+```
+
+A call you do not need to keep a reference to can be started and cancelled in
+one expression too: `new UsersController().findOne(id).abort()`.
+
+- `abort()` aborts the underlying `fetch` and rejects the promise with an
+  `AbortError`. `abort(reason)` rejects with `reason` instead, the way
+  `AbortController.abort(reason)` does.
+- It works the same for controllers, GraphQL resolvers, `Observable` methods
+  and streamed files, and it is per call: every call has its own signal, so
+  aborting one never touches another.
+- Calling `abort()` once the call has settled does nothing.
+- An aborted call is not a `NestBridgeError` or `NestBridgeGraphqlError` —
+  `isNestBridgeError()` is `false` for it — so check for the `AbortError`
+  before treating a rejection as a server error.
+- The promise rejects as soon as you abort, even if a custom `fetch` passed to
+  `configureNestBridge` ignores the `signal` it is given. Aborting cancels the
+  browser's request; the server may already have started handling it.
+- Only the promise a method returns has `abort()`. A promise derived from it
+  with `then()`, `catch()` or `finally()` is a plain `Promise`, so keep the
+  original (`const pending = users.findOne('1')`) and call `abort()` on that.
+- Aborting a call nobody awaits is quiet: `abort()` marks the promise as
+  handled, so it raises no unhandled rejection. Anyone who does await it still
+  gets the `AbortError`, and a call that fails for any other reason is reported
+  as usual.
 
 ## Global prefix and URI versioning
 

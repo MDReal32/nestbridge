@@ -78,8 +78,8 @@ method using a type-only reference back to the real controller or resolver
 streamed methods), so argument and return types are projected from the real
 class's own type — never re-derived from the AST. Pass the result of
 `detectResponseWrapper` as `responseWrapper` to wrap the JSON-returning
-methods in the detected response shape. The helper types are imported from
-`'nestbridge'`.
+methods in the detected response shape (an `AbortablePromise` of it). The helper
+types are imported from `'nestbridge'`.
 
 ```ts
 import { generateControllerDeclaration } from '@nestbridge/core';
