@@ -211,13 +211,15 @@ instead:
 ```json
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@server/*": ["./.nestbridge/server/src/*"]
     }
   }
 }
 ```
+
+`paths` entries resolve relative to the `tsconfig.json` that declares them, so
+no `baseUrl` is needed (TypeScript 7 removed that option).
 
 NestBridge mirrors each controller's path under `outputDir`, relative to
 `root`, stripping any leading `../` segments. For a controller glob of

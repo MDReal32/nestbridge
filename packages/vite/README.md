@@ -58,13 +58,15 @@ files so the plugin can intercept them. A matching `paths` entry in
 ```json
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@server/*": ["./.nestbridge/server/src/*"]
     }
   }
 }
 ```
+
+`paths` entries resolve relative to the `tsconfig.json` that declares them, so
+no `baseUrl` is needed (TypeScript 7 removed that option).
 
 Add `.nestbridge/` (or your configured `outputDir`) to `.gitignore` — it's
 regenerated on every build and on every dev-server start.
