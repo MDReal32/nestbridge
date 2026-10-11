@@ -292,6 +292,7 @@ interface NestBridgeOptions {
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
+  logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
   outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context) — independent of `root`
   root?: string;                    // base directory for this app's controllers, resolvers and bootstrap file; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
 }
@@ -929,6 +930,28 @@ a webpack production build) they throw and fail the build; in watch mode
 (`vite`, webpack `--watch`) they are logged as warnings so the dev server keeps
 running. `debug: true` in `NestBridgeOptions` additionally logs
 controller/resolver discovery, analysis, and watch activity.
+
+### Hiding NestBridge logs
+
+The plugin logs through the bundler's own logger — Vite's `config.logger`,
+webpack's infrastructure logger — so the bundler's level already applies:
+Vite's `logLevel: 'error'` or `'silent'` hides the watch-mode warnings, and
+webpack's `infrastructureLogging.level` does the same. To quiet only NestBridge,
+set `logLevel` in its options, with the same values as Vite's:
+
+```ts
+nestBridge({
+  controllers: '../server/src/**/*.controller.ts',
+  logLevel: 'error', // 'info' | 'warn' | 'error' | 'silent'
+});
+```
+
+`debug` messages are info-level, so `'warn'` and below hide them. `logLevel` is set
+per app; a warning about several apps (a file matched by two of them) is shown
+unless every app silences warnings. A level never shows more than the bundler
+lets through, and it does not hide diagnostics that fail a one-shot build — those
+are thrown, and the way to stop them is to fix the source or state the value in
+the options.
 
 ## DTOs
 

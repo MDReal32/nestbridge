@@ -120,6 +120,7 @@ interface NestBridgeOptions {
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
+  logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
   outputDir?: string;               // defaults to ".nestbridge", resolved from webpack's `context` — independent of `root`
   root?: string;                    // base for discovering controllers/resolvers and the bootstrap file; relative paths resolve against process.cwd(), which is also the default
 }
@@ -148,6 +149,10 @@ from `nestbridge` only for headers, a custom `fetch`, an explicit
 The global prefix and URI versioning that the app's bootstrap file sets are
 read statically and added to every request path, so keep `baseURL` to the
 origin — see [Global prefix and URI versioning](../../README.md#global-prefix-and-uri-versioning).
+
+The plugin logs through webpack's own logger, so `infrastructureLogging.level` already applies to its
+watch-mode warnings. `logLevel` (`'info'`, `'warn'`, `'error'` or `'silent'`) quiets only NestBridge — see
+[Hiding NestBridge logs](../../README.md#hiding-nestbridge-logs).
 
 ## License
 

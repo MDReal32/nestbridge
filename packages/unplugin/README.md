@@ -58,6 +58,7 @@ interface NestBridgeOptions {
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
+  logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
   outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context)
   root?: string;                    // base for the app's files; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
 }
@@ -75,11 +76,15 @@ interface VersioningOption {
 type NestBridgePluginOptions = NestBridgeOptions | NestBridgeOptions[];
 ```
 
+`logLevel` follows Vite's naming. Warnings and `debug` messages go to the bundler's own
+logger — Vite's `config.logger`, webpack's infrastructure logger, the console for
+the other bundlers — so its level applies too; the option only narrows it.
+
 `ResolvedNestBridgeOptions` is the same shape with the defaults filled in; the
 plugin factory resolves every entry once, validating the array as it does: an
 empty array, a missing or duplicate `name` among several entries, and a `name`
-that is not a letter followed by letters, digits, `-` or `_` all fail with an
-explicit error.
+that is not a letter followed by letters, digits, `-` or `_`, and an unknown
+`logLevel` all fail with an explicit error.
 
 ## What the plugin does
 
