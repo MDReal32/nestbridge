@@ -29,9 +29,11 @@ yarn add @nestbridge/core
 Parses each file, finds classes decorated with `@Controller(...)`, and
 extracts a plain `ControllerDefinition` per controller — its base path, and
 each `@Get`/`@Post`/`@Put`/`@Patch`/`@Delete` method's HTTP method, route
-path, and `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping. Anything it
-can't safely resolve statically (a non-literal route path, an unsupported
-decorator) becomes a `NestBridgeDiagnostic` instead of a guess.
+path, `@Param`/`@Query`/`@Body`/`@Headers` parameter mapping, and
+`responseKind` (`'json'`, `'observable'` for an `Observable<T>` return type, or
+`'stream'` for `StreamableFile`), read from the method's declared return type.
+Anything it can't safely resolve statically (a non-literal route path, an
+unsupported decorator) becomes a `NestBridgeDiagnostic` instead of a guess.
 
 ```ts
 import { analyzeControllers } from '@nestbridge/core';
@@ -61,15 +63,19 @@ const { resolvers, diagnostics } = analyzeResolvers([
 ]);
 ```
 
-### `generateControllerDeclaration(definition, outputFilePath)`
+### `generateControllerDeclaration(definition, outputFilePath, responseWrapper?)`
 
 Turns a `ControllerDefinition` or a `ResolverDefinition` into the text of a
 `.d.ts` file — both share the same `{ name, sourceFile, methods }` shape, so
 the same generator is used for both. The generated class re-declares each
 method using a type-only reference back to the real controller or resolver
-(`Parameters<__ServerX['method']>` / `RemoteResult<...>`), so argument and
-return types are projected from the real class's own type — never re-derived
-from the AST.
+(`Parameters<__ServerX['method']>` / `RemoteResult<...>`, or
+`RemoteObservableResult<...>` / `RemoteStreamResult<...>` for observable and
+streamed methods), so argument and return types are projected from the real
+class's own type — never re-derived from the AST. Pass the result of
+`detectResponseWrapper` as `responseWrapper` to wrap the JSON-returning
+methods in the detected response shape. The helper types are imported from
+`'nestbridge'`.
 
 ```ts
 import { generateControllerDeclaration } from '@nestbridge/core';
@@ -135,11 +141,12 @@ more diagnostics as a thrown `Error`.
 
 ### Types
 
-`ControllerDefinition`, `ControllerMethodDefinition`,
-`ControllerParameterDefinition`, `HttpMethod`, `ParameterSourceKind`,
-`ResolverDefinition`, `ResolverMethodDefinition`,
-`ResolverArgumentDefinition`, `SelectionField`, `GraphqlOperationKind`,
-`NestBridgeDiagnostic`, `NestBridgeDiagnosticCode`, `ResponseWrapperDetection`,
+`ControllerAnalysisResult`, `ControllerDefinition`,
+`ControllerMethodDefinition`, `ControllerParameterDefinition`, `HttpMethod`,
+`ParameterSourceKind`, `ResolverAnalysisResult`, `ResolverDefinition`,
+`ResolverMethodDefinition`, `ResolverArgumentDefinition`, `SelectionField`,
+`GraphqlOperationKind`, `ResponseKind`, `NestBridgeDiagnostic`,
+`NestBridgeDiagnosticCode`, `ResponseWrapperDetection`,
 `ErrorResponseShapeDetection`.
 
 ## License

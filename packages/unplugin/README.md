@@ -6,8 +6,8 @@
 
 The bundler-agnostic plugin logic behind NestBridge: discovery of NestJS
 controllers and GraphQL resolvers, `.d.ts` declaration writing, and the
-virtual-module code generation that turns an imported controller/resolver
-into a `fetch()` call or GraphQL request. It contains no Vite- or
+code generation that turns an imported controller/resolver into a `fetch()`
+call or GraphQL request. It contains no Vite- or
 webpack-specific code — bundler bindings are produced by
 [`unplugin`](https://github.com/unjs/unplugin), which builds one plugin
 implementation into per-bundler outputs.
@@ -51,10 +51,10 @@ nestBridgeUnplugin.farm(options); // Farm JsPlugin
 interface NestBridgeOptions {
   controllers: string | string[]; // glob(s), resolved relative to `root`
   resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
-  baseURL?: string;                // informational; call configureNestBridge for the runtime effect
-  debug?: boolean;                 // logs discovery/analysis/HMR activity
-  outputDir?: string;               // defaults to ".nestbridge"
-  root?: string;                    // defaults to the bundler's project root, or process.cwd()
+  baseURL?: string;                // prefix for REST requests and the default GraphQL endpoint; applied to the runtime automatically
+  debug?: boolean;                 // logs discovery/analysis/watch activity
+  outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context)
+  root?: string;                    // defaults to Vite's root, or process.cwd() under webpack
 }
 ```
 
@@ -76,14 +76,18 @@ tests) that need the resolved shape ahead of time.
    `nestbridge-error-body.d.ts` file in `outputDir`. Neither writes anything
    when nothing is registered — see the [repository
    README](../../README.md) for what's recognized.
-3. It intercepts the bundler's resolution of that same import (`resolveId`/
-   `transform`) and serves generated code that calls
-   [`@nestbridge/runtime`](../runtime) instead of the real controller or
-   resolver — the real source, its NestJS decorators, and its dependencies
-   never enter the bundle.
-4. On watched file changes (`watchChange`), it re-analyzes only the affected
-   file and rewrites its declaration and generated module; a change to the
-   bootstrap file itself re-runs the interceptor/filter detection too.
+3. In the `transform` hook (the plugin runs with `enforce: 'pre'`), it
+   replaces the source of each discovered controller or resolver with
+   generated code that calls `request()` / `graphqlRequest()` from
+   `nestbridge` (which re-exports [`@nestbridge/runtime`](../runtime)) — the
+   real source, its NestJS decorators, and its dependencies never enter the
+   bundle.
+4. When `baseURL` is set, a small virtual module (`virtual-nestbridge-config`,
+   served through `resolveId`/`load`) calls `setNestBridgeBaseURL(baseURL)`;
+   every generated controller and resolver module imports it.
+5. When a tracked controller, resolver, or bootstrap file changes
+   (`watchChange`), it re-runs the analysis and rewrites the declarations,
+   including the interceptor/filter detection.
 
 Diagnostics from `@nestbridge/core` (an unsupported decorator, a
 non-literal route path, etc.) are thrown during a one-shot build and logged

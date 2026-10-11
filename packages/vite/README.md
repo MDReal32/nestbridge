@@ -18,8 +18,13 @@ This plugin is a thin `vite` binding around the bundler-agnostic
 
 ```bash
 yarn add -D @nestbridge/vite
-yarn add @nestbridge/runtime
+yarn add nestbridge
 ```
+
+The generated client modules and declarations import from `nestbridge`, so it
+has to be a direct dependency of your app. If you would rather have one
+dependency, `yarn add nestbridge` alone is enough: import the plugin from
+`nestbridge/vite` (its default export) instead of `@nestbridge/vite`.
 
 ## Setup
 
@@ -68,11 +73,12 @@ regenerated on every build and on every dev-server start.
 
 ```ts
 interface NestBridgeOptions {
-  controllers: string | string[]; // glob(s), resolved relative to the Vite root
+  controllers: string | string[]; // glob(s), resolved relative to `root`
   resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
-  baseURL?: string;                // informational; call configureNestBridge for the runtime effect
-  debug?: boolean;                 // logs discovery/analysis/HMR activity
-  outputDir?: string;               // defaults to ".nestbridge"
+  baseURL?: string;                // prefix for REST requests and the default GraphQL endpoint; applied to the runtime automatically
+  debug?: boolean;                 // logs discovery/analysis/watch activity
+  outputDir?: string;               // defaults to ".nestbridge", resolved from the Vite root — independent of `root`
+  root?: string;                    // base for discovering controllers/resolvers and the bootstrap file; defaults to the Vite root
 }
 ```
 
@@ -80,9 +86,11 @@ Using webpack instead of Vite? See [`@nestbridge/webpack`'s README](../webpack/R
 for the equivalent setup — same options, same generated output, different
 bundler.
 
-Don't forget to call `configureNestBridge` from `@nestbridge/runtime` — this
-option only affects generated path text, not the runtime `fetch()`/GraphQL
-config (`baseURL`/`graphqlEndpoint`).
+`baseURL` needs no extra runtime code: the plugin generates a module that
+calls `setNestBridgeBaseURL(baseURL)` from `nestbridge`, and every generated
+controller and resolver module imports it. Use `configureNestBridge` from
+`nestbridge` only for headers, a custom `fetch`, or an explicit
+`graphqlEndpoint`.
 
 ## License
 

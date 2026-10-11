@@ -19,8 +19,13 @@ and declaration writing behave identically across both bundlers.
 
 ```bash
 yarn add -D @nestbridge/webpack
-yarn add @nestbridge/runtime
+yarn add nestbridge
 ```
+
+The generated client modules and declarations import from `nestbridge`, so it
+has to be a direct dependency of your app. If you would rather have one
+dependency, `yarn add nestbridge` alone is enough: import the plugin from
+`nestbridge/webpack` (its default export) instead of `@nestbridge/webpack`.
 
 ## Setup
 
@@ -78,16 +83,18 @@ directory your `controllers`/`resolvers` globs are relative to.
 interface NestBridgeOptions {
   controllers: string | string[]; // glob(s), resolved relative to `root`
   resolvers?: string | string[];   // glob(s) for GraphQL resolvers; defaults to none
-  baseURL?: string;                // informational; call configureNestBridge for the runtime effect
-  debug?: boolean;                 // logs discovery/analysis/HMR activity
-  outputDir?: string;               // defaults to ".nestbridge"
+  baseURL?: string;                // prefix for REST requests and the default GraphQL endpoint; applied to the runtime automatically
+  debug?: boolean;                 // logs discovery/analysis/watch activity
+  outputDir?: string;               // defaults to ".nestbridge", resolved from webpack's `context` — independent of `root`
   root?: string;                    // defaults to process.cwd()
 }
 ```
 
-Don't forget to call `configureNestBridge` from `@nestbridge/runtime` — this
-option only affects generated path text, not the runtime `fetch()`/GraphQL
-config (`baseURL`/`graphqlEndpoint`).
+`baseURL` needs no extra runtime code: the plugin generates a module that
+calls `setNestBridgeBaseURL(baseURL)` from `nestbridge`, and every generated
+controller and resolver module imports it. Use `configureNestBridge` from
+`nestbridge` only for headers, a custom `fetch`, or an explicit
+`graphqlEndpoint`.
 
 ## License
 
