@@ -12,6 +12,11 @@ export interface ControllerMethodDefinition {
    */
   version?: string | null;
   parameters: ControllerParameterDefinition[];
+  /**
+   * Positions of parameters carrying a custom decorator such as `@CurrentUser()`. The server
+   * resolves them itself, so the generated client neither accepts nor sends them.
+   */
+  serverOnlyParameterIndexes: number[];
   responseKind: ResponseKind;
   line: number;
   column: number;

@@ -42,6 +42,23 @@ describe('diagnostics', () => {
     expect(diagnostics[0]?.detail).toContain('@Req()');
   });
 
+  it('treats a custom parameter decorator as server-resolved without a diagnostic', () => {
+    const { controllers, diagnostics } = analyzeControllers([
+      fixture('custom-parameter-decorator.controller.ts'),
+    ]);
+
+    expect(diagnostics).toEqual([]);
+    expect(controllers[0]?.methods.map((method) => method.name)).toEqual(['me', 'audit']);
+    expect(controllers[0]?.methods[0]).toMatchObject({
+      parameters: [],
+      serverOnlyParameterIndexes: [0],
+    });
+    expect(controllers[0]?.methods[1]).toMatchObject({
+      parameters: [{ kind: 'param', name: 'id', parameterName: 'id', index: 1 }],
+      serverOnlyParameterIndexes: [0],
+    });
+  });
+
   it('reports an unsupported-parameter diagnostic for a @Param argument that is not a string literal', () => {
     const { diagnostics } = analyzeControllers([
       fixture('unsupported-param-argument.controller.ts'),

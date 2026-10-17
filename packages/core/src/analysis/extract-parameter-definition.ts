@@ -5,12 +5,18 @@ import type { ControllerParameterDefinition } from '../models/controller-paramet
 import {
   decoratorNameOf,
   findAnyDecorator,
+  hasAnyDecorator,
   readStaticStringArgument,
 } from './decorator-inspection';
 import { locationOf } from './node-location';
 
 const SUPPORTED_PARAMETER_DECORATORS = ['Param', 'Query', 'Body', 'Headers'] as const;
 const KNOWN_UNSUPPORTED_PARAMETER_DECORATORS = ['Req', 'Res', 'Request', 'Response'] as const;
+
+const TRANSPORT_PARAMETER_DECORATORS = [
+  ...SUPPORTED_PARAMETER_DECORATORS,
+  ...KNOWN_UNSUPPORTED_PARAMETER_DECORATORS,
+];
 
 interface ExtractionContext {
   sourceFile: SourceFile;
@@ -20,15 +26,16 @@ interface ExtractionContext {
   diagnostics: NestBridgeDiagnostic[];
 }
 
+export const isServerResolvedParameter = (parameter: ParameterDeclaration) =>
+  hasAnyDecorator(parameter) &&
+  findAnyDecorator(parameter, TRANSPORT_PARAMETER_DECORATORS) === undefined;
+
 export const extractParameterDefinition = (
   parameter: ParameterDeclaration,
   index: number,
   context: ExtractionContext,
 ): ControllerParameterDefinition | undefined => {
-  const decorator = findAnyDecorator(parameter, [
-    ...SUPPORTED_PARAMETER_DECORATORS,
-    ...KNOWN_UNSUPPORTED_PARAMETER_DECORATORS,
-  ]);
+  const decorator = findAnyDecorator(parameter, TRANSPORT_PARAMETER_DECORATORS);
   const location = locationOf(context.sourceFile, parameter);
 
   if (decorator === undefined) {

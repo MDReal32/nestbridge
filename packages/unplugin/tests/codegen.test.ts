@@ -8,6 +8,7 @@ const method = (overrides: Partial<ControllerMethodDefinition>): ControllerMetho
   httpMethod: 'GET',
   path: '/users/:id',
   parameters: [],
+  serverOnlyParameterIndexes: [],
   responseKind: 'json',
   line: 1,
   column: 1,

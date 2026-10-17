@@ -8,7 +8,10 @@ import {
   findDecorator,
   readStaticStringArgument,
 } from './decorator-inspection';
-import { extractParameterDefinition } from './extract-parameter-definition';
+import {
+  extractParameterDefinition,
+  isServerResolvedParameter,
+} from './extract-parameter-definition';
 import { locationOf } from './node-location';
 import { readResponseKind } from './read-response-kind';
 import { readRouteVersion } from './read-route-version';
@@ -99,14 +102,20 @@ export const extractMethodDefinition = (method: MethodDeclaration, context: Extr
     return undefined;
   }
 
+  const serverOnlyParameterIndexes = method.parameters.flatMap((parameter, index) =>
+    isServerResolvedParameter(parameter) ? [index] : [],
+  );
+
   const parameters = method.parameters.map((parameter, index) =>
-    extractParameterDefinition(parameter, index, {
-      sourceFile: context.sourceFile,
-      filePath: context.filePath,
-      controllerName: context.controllerName,
-      methodName,
-      diagnostics: context.diagnostics,
-    }),
+    serverOnlyParameterIndexes.includes(index)
+      ? null
+      : extractParameterDefinition(parameter, index, {
+          sourceFile: context.sourceFile,
+          filePath: context.filePath,
+          controllerName: context.controllerName,
+          methodName,
+          diagnostics: context.diagnostics,
+        }),
   );
 
   if (parameters.some((parameter) => parameter === undefined)) {
@@ -118,7 +127,8 @@ export const extractMethodDefinition = (method: MethodDeclaration, context: Extr
     httpMethod,
     path: joinRoutePath(context.controllerPath, routeArgument.value),
     version: version.value,
-    parameters: parameters.filter((parameter) => parameter !== undefined),
+    parameters: parameters.filter((parameter) => parameter !== undefined && parameter !== null),
+    serverOnlyParameterIndexes,
     responseKind: readResponseKind(method.type),
     line: location.line,
     column: location.column,

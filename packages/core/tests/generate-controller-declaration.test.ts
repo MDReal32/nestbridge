@@ -58,6 +58,23 @@ describe('generateControllerDeclaration', () => {
     );
   });
 
+  it('omits server-resolved parameters from the client signature', () => {
+    const { controllers } = analyzeControllers([
+      fixture('custom-parameter-decorator.controller.ts'),
+    ]);
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/custom-parameter-decorator.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      "me(): RemoteResult<__ServerCustomParameterDecoratorController['me']>;",
+    );
+    expect(declaration).toContain(
+      "audit(id: Parameters<__ServerCustomParameterDecoratorController['audit']>[1]): RemoteResult<__ServerCustomParameterDecoratorController['audit']>;",
+    );
+  });
+
   it('imports RemoteResult from @nestbridge/runtime', () => {
     const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
     const declaration = generateControllerDeclaration(

@@ -2,10 +2,22 @@ import { dirname, extname, relative } from 'node:path';
 import type { ResponseKind } from '../models/response-kind';
 import type { ResponseWrapperDetection } from '../models/response-wrapper-detection';
 
+interface ClientDeclarationParameter {
+  index: number;
+  parameterName: string;
+}
+
+interface ClientDeclarationMethod {
+  name: string;
+  responseKind?: ResponseKind;
+  parameters?: readonly ClientDeclarationParameter[];
+  serverOnlyParameterIndexes?: readonly number[];
+}
+
 interface ClientDeclarationSource {
   name: string;
   sourceFile: string;
-  methods: readonly { name: string; responseKind?: ResponseKind }[];
+  methods: readonly ClientDeclarationMethod[];
 }
 
 const REMOTE_RESULT_HELPERS: Record<ResponseKind, string> = {
@@ -47,14 +59,27 @@ export const generateControllerDeclaration = (
   const importSpecifier = stripExtension(sourceFileSpecifier);
   const serverAlias = `__Server${controller.name}`;
 
-  const helperNameFor = (method: ClientDeclarationSource['methods'][number]) =>
+  const helperNameFor = (method: ClientDeclarationMethod) =>
     responseWrapper !== undefined && (method.responseKind ?? 'json') === 'json'
       ? WRAPPED_RESULT_HELPER
       : REMOTE_RESULT_HELPERS[method.responseKind ?? 'json'];
 
+  const parameterListFor = (method: ClientDeclarationMethod) => {
+    const serverParameters = `Parameters<${serverAlias}['${method.name}']>`;
+
+    if ((method.serverOnlyParameterIndexes ?? []).length === 0) {
+      return `...args: ${serverParameters}`;
+    }
+
+    return [...(method.parameters ?? [])]
+      .sort((a, b) => a.index - b.index)
+      .map((parameter) => `${parameter.parameterName}: ${serverParameters}[${parameter.index}]`)
+      .join(', ');
+  };
+
   const methodDeclarations = controller.methods.map((method) => {
     const helperName = helperNameFor(method);
-    return `  ${method.name}(...args: Parameters<${serverAlias}['${method.name}']>): ${helperName}<${serverAlias}['${method.name}']>;`;
+    return `  ${method.name}(${parameterListFor(method)}): ${helperName}<${serverAlias}['${method.name}']>;`;
   });
 
   const classBody = ['  constructor();', '', ...methodDeclarations].join('\n');
