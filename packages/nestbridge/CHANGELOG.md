@@ -1,5 +1,14 @@
 # nestbridge
 
+## 2.4.1
+
+### Patch Changes
+
+- 33aa8d7: Treat parameters carrying a custom decorator (for example `@CurrentUser()`) as server-resolved: they no longer drop the method from the generated client, and are left out of the generated method signature.
+- @nestbridge/vite@2.4.1
+  - @nestbridge/webpack@2.4.1
+  - @nestbridge/runtime@2.4.1
+
 ## 2.4.0
 
 ### Minor Changes
