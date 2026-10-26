@@ -144,7 +144,7 @@ README](../../README.md#auto-detected-exception-filter-error-body)):
 
 ```ts
 import { isNestBridgeError } from 'nestbridge';
-import type { NestBridgeErrorBody } from '../../.nestbridge/nestbridge-error-body';
+import type { NestBridgeErrorBody } from '../../../.nestbridge/apps/web/client/nestbridge-error-body';
 
 try {
   await users.findOne('123');

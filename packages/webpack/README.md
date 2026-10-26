@@ -62,7 +62,7 @@ files so the plugin can intercept them. A matching `paths` entry in
 {
   "compilerOptions": {
     "paths": {
-      "@server/*": ["./.nestbridge/server/src/*"]
+      "@server/*": ["../../../.nestbridge/apps/web/server/src/*"]
     }
   }
 }
@@ -103,7 +103,7 @@ nestBridge([
 
 A relative `root` resolves against `process.cwd()`. Declarations land in
 `<outputDir>/<name>/`, so add one `resolve.alias` and one `paths` entry per app
-(`"@identity/*": ["./.nestbridge/identity/src/*"]`), and each app keeps its own
+(`"@identity/*": ["../../.nestbridge/identity/apps/identity/src/*"]`), and each app keeps its own
 `baseURL`, bootstrap file, global prefix and versioning. See
 [Several server apps](../../README.md#several-server-apps) in the repository
 README, and [`MIGRATION.md`](../../MIGRATION.md) when upgrading from 2.1.
@@ -121,7 +121,7 @@ interface NestBridgeOptions {
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
   logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
-  outputDir?: string;               // defaults to ".nestbridge", resolved from webpack's `context` — independent of `root`
+  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root
   root?: string;                    // base for discovering controllers/resolvers and the bootstrap file; relative paths resolve against process.cwd(), which is also the default
 }
 

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import {
   type ApplicationRouting,
   detectErrorResponseShape,
@@ -19,6 +19,7 @@ import { createControllerRegistry } from './controller-registry';
 import type { NestBridgeAppAnalysis } from './nestbridge-app-analysis';
 import type { NestBridgeAppLocation } from './nestbridge-app-location';
 import { normalizePath } from './normalize-path';
+import { resolveOutputLocation } from './resolve-output-location';
 import { resolveRoutingOption } from './resolve-routing-option';
 import { createResolverRegistry } from './resolver-registry';
 
@@ -36,9 +37,12 @@ export const createNestBridgeApp = (
 ): NestBridgeApp => {
   const root =
     options.root === undefined ? location.baseRoot : resolve(location.baseRoot, options.root);
-  const resolvedOutputDir = resolve(location.bundlerRoot ?? root, options.outputDir);
-  const declarationDir =
-    options.name === undefined ? resolvedOutputDir : join(resolvedOutputDir, options.name);
+  const output = resolveOutputLocation({
+    outputDir: options.outputDir,
+    name: options.name,
+    root,
+    bundlerRoot: location.bundlerRoot,
+  });
   const controllerRegistry = createControllerRegistry(options.controllers, root);
   const resolverRegistry = createResolverRegistry(options.resolvers, root);
   let bootstrapFilePath: string | undefined;
@@ -46,7 +50,7 @@ export const createNestBridgeApp = (
   const describeApp = () => (options.name === undefined ? 'the app' : `app "${options.name}"`);
 
   const locateBootstrapFile = (problems: string[]) => {
-    const bootstrapFile = resolveBootstrapFile(root, resolvedOutputDir, options.bootstrap);
+    const bootstrapFile = resolveBootstrapFile(root, output.outputDir, options.bootstrap);
 
     if (
       bootstrapFile !== undefined &&
@@ -64,7 +68,7 @@ export const createNestBridgeApp = (
     discoverFiles(patterns, root).map(normalizePath).includes(filePath);
 
   const isBootstrapFile = (filePath: string) => {
-    const bootstrapFile = resolveBootstrapFile(root, resolvedOutputDir, options.bootstrap);
+    const bootstrapFile = resolveBootstrapFile(root, output.outputDir, options.bootstrap);
     return bootstrapFile !== undefined && normalizePath(bootstrapFile) === filePath;
   };
 
@@ -91,9 +95,14 @@ export const createNestBridgeApp = (
     const { controllers, diagnostics: controllerDiagnostics } = controllerRegistry.refresh(routing);
     const { resolvers, diagnostics: resolverDiagnostics } = resolverRegistry.refresh();
 
-    writeControllerDeclarations(controllers, root, declarationDir, responseWrapper);
-    writeResolverDeclarations(resolvers, root, declarationDir);
-    writeErrorBodyDeclaration(declarationDir, errorResponseShape);
+    writeControllerDeclarations(
+      controllers,
+      output.mirrorRoot,
+      output.declarationDir,
+      responseWrapper,
+    );
+    writeResolverDeclarations(resolvers, output.mirrorRoot, output.declarationDir);
+    writeErrorBodyDeclaration(output.errorBodyDir, errorResponseShape);
 
     return {
       controllerCount: controllers.length,

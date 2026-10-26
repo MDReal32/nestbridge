@@ -11,6 +11,6 @@ export interface ResolvedNestBridgeOptions {
   versioning: UriVersioning | false | undefined;
   debug: boolean;
   logLevel: NestBridgeLogLevel | undefined;
-  outputDir: string;
+  outputDir: string | undefined;
   root: string | undefined;
 }

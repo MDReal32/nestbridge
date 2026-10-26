@@ -143,8 +143,8 @@ Things to adjust when you adopt it:
   {
     "compilerOptions": {
       "paths": {
-        "@identity/*": ["./.nestbridge/identity/src/*"],
-        "@store/*": ["./.nestbridge/store/src/*"]
+        "@identity/*": ["../../.nestbridge/identity/apps/identity/src/*"],
+        "@store/*": ["../../.nestbridge/store/apps/store/src/*"]
       }
     }
   }

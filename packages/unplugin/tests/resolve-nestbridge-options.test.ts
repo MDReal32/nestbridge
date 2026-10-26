@@ -15,7 +15,7 @@ describe('resolveNestBridgeOptions', () => {
       globalPrefix: undefined,
       versioning: undefined,
       debug: false,
-      outputDir: '.nestbridge',
+      outputDir: undefined,
       root: undefined,
     });
   });

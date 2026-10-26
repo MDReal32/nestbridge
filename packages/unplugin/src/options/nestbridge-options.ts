@@ -34,6 +34,12 @@ export interface NestBridgeOptions {
    * thrown and unaffected.
    */
   logLevel?: NestBridgeLogLevel;
+  /**
+   * Where the generated declarations go. By default `.nestbridge` at the workspace root (the nearest
+   * ancestor with `nx.json`, `pnpm-workspace.yaml`, `turbo.json`, `lerna.json` or a `package.json`
+   * with `workspaces`), shared by every app, or in the project root when there is no workspace. An
+   * explicit value is resolved from the bundler's own root and keeps the per-project layout.
+   */
   outputDir?: string;
   root?: string;
 }

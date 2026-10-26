@@ -21,6 +21,6 @@ export const resolveNestBridgeEntry = (options: NestBridgeOptions): ResolvedNest
   versioning: resolveVersioningOption(options.versioning),
   debug: options.debug ?? false,
   logLevel: options.logLevel,
-  outputDir: options.outputDir ?? '.nestbridge',
+  outputDir: options.outputDir,
   root: options.root,
 });

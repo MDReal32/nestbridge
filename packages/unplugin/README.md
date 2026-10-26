@@ -59,7 +59,7 @@ interface NestBridgeOptions {
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
   logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
-  outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context)
+  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root
   root?: string;                    // base for the app's files; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
 }
 

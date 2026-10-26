@@ -264,7 +264,7 @@ instead:
 {
   "compilerOptions": {
     "paths": {
-      "@server/*": ["./.nestbridge/server/src/*"]
+      "@server/*": ["../../../.nestbridge/apps/web/server/src/*"]
     }
   }
 }
@@ -273,13 +273,24 @@ instead:
 `paths` entries resolve relative to the `tsconfig.json` that declares them, so
 no `baseUrl` is needed (TypeScript 7 removed that option).
 
-NestBridge mirrors each controller's path under `outputDir`, relative to
-`root`, stripping any leading `../` segments. For a controller glob of
-`../server/src/**/*.controller.ts` resolved from a client at
-`examples/http/client`, `items.controller.ts` ends up at
-`.nestbridge/server/src/items/items.controller.d.ts` — hence the `paths`
-entry above. Add `.nestbridge/` to your `.gitignore`; it's generated on every
-build and on every dev-server start.
+NestBridge writes the generated declarations to a `.nestbridge/` folder at the
+**workspace root** — the nearest ancestor containing `nx.json`,
+`pnpm-workspace.yaml`, `turbo.json`, `lerna.json` or a `package.json` with
+`workspaces` — and mirrors each controller's path under it relative to that
+root. With no workspace it falls back to `.nestbridge/` in the project root and
+mirrors paths relative to `root`, stripping any leading `../` segments. For a
+client at `apps/web/client` with the controller glob
+`../server/src/**/*.controller.ts`, `items.controller.ts` ends up at
+`.nestbridge/apps/web/server/src/items/items.controller.d.ts` — hence the
+`paths` entry above (which is `../../../.nestbridge/…` from `apps/web/client`).
+Add `.nestbridge/` to your `.gitignore`; it's generated on every build and on
+every dev-server start.
+
+Because the folder is shared, apps in the same workspace reuse one copy of each
+declaration, and two apps whose servers live in different folders never
+overwrite each other. Setting `outputDir` explicitly opts out: it is resolved
+from the bundler's own root and keeps the per-project layout
+(`<outputDir>/server/src/…`).
 
 ### `NestBridgeOptions`
 
@@ -294,7 +305,7 @@ interface NestBridgeOptions {
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
   logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
-  outputDir?: string;               // defaults to ".nestbridge", resolved from the bundler's own root (Vite's root / webpack's context) — independent of `root`
+  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root
   root?: string;                    // base directory for this app's controllers, resolvers and bootstrap file; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
 }
 
@@ -363,8 +374,8 @@ export default defineConfig({
 {
   "compilerOptions": {
     "paths": {
-      "@identity/*": ["./.nestbridge/identity/src/*"],
-      "@store/*": ["./.nestbridge/store/src/*"]
+      "@identity/*": ["../../.nestbridge/identity/apps/identity/src/*"],
+      "@store/*": ["../../.nestbridge/store/apps/store/src/*"]
     }
   }
 }
@@ -619,7 +630,7 @@ type RemoteResult<T> = T extends (...args: never[]) => infer Result
 which is exactly what a generated declaration looks like on disk:
 
 ```ts
-// .nestbridge/server/src/users/users.controller.d.ts
+// .nestbridge/apps/web/server/src/users/users.controller.d.ts
 import type { UsersController as __ServerUsersController } from '../../server/src/users/users.controller';
 import type { RemoteResult } from 'nestbridge';
 
@@ -885,12 +896,14 @@ class HttpExceptionFilter implements ExceptionFilter {
 ```
 
 NestBridge statically detects the shape of that response body and writes it
-to a fixed declaration file, `<outputDir>/nestbridge-error-body.d.ts`
-(`<outputDir>/<name>/nestbridge-error-body.d.ts` for a named app),
+to a fixed declaration file, `nestbridge-error-body.d.ts`, in the client's own
+folder under the workspace-root output directory
+(`.nestbridge/<client path from the workspace root>/`; directly in `<outputDir>` when you set
+`outputDir` or have no workspace, and in `<outputDir>/<name>/` for a named app),
 exporting a `NestBridgeErrorBody` type:
 
 ```ts
-// .nestbridge/nestbridge-error-body.d.ts
+// .nestbridge/apps/web/client/nestbridge-error-body.d.ts
 export type NestBridgeErrorBody = { statusCode: number; message: string };
 ```
 
@@ -912,7 +925,7 @@ guard, so a caught error narrows against the generated type:
 
 ```ts
 import { isNestBridgeError } from 'nestbridge';
-import type { NestBridgeErrorBody } from '../../.nestbridge/nestbridge-error-body';
+import type { NestBridgeErrorBody } from '../../../.nestbridge/apps/web/client/nestbridge-error-body';
 
 try {
   await users.findOne('123');

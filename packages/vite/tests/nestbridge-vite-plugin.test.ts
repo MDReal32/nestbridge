@@ -29,6 +29,7 @@ const runBuild = async () => {
         controllers: '../server/**/*.controller.ts',
         resolvers: '../server/**/*.resolver.ts',
         baseURL: '/api',
+        outputDir: '.nestbridge',
       }),
     ],
   });
