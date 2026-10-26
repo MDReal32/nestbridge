@@ -1,6 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { type ErrorResponseShapeDetection, generateErrorBodyDeclaration } from '@nestbridge/core';
+import { writeFileLocked } from './write-file-locked';
 
 export const ERROR_BODY_DECLARATION_FILE_NAME = 'nestbridge-error-body.d.ts';
 
@@ -19,9 +20,8 @@ export const writeErrorBodyDeclaration = (
   }
 
   mkdirSync(dirname(outputFilePath), { recursive: true });
-  writeFileSync(
+  writeFileLocked(
     outputFilePath,
     generateErrorBodyDeclaration(errorResponseShape.errorBodyTypeSource),
-    'utf-8',
   );
 };

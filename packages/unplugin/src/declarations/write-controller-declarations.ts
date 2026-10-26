@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
   type ControllerDefinition,
@@ -6,6 +6,7 @@ import {
   type ResponseWrapperDetection,
 } from '@nestbridge/core';
 import { mirroredDeclarationPath } from './mirror-declaration-path';
+import { writeFileLocked } from './write-file-locked';
 
 export const writeControllerDeclarations = (
   controllers: readonly ControllerDefinition[],
@@ -20,10 +21,9 @@ export const writeControllerDeclarations = (
       controller.sourceFile,
     );
     mkdirSync(dirname(outputFilePath), { recursive: true });
-    writeFileSync(
+    writeFileLocked(
       outputFilePath,
       generateControllerDeclaration(controller, outputFilePath, responseWrapper),
-      'utf-8',
     );
   }
 };

@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { generateControllerDeclaration, type ResolverDefinition } from '@nestbridge/core';
 import { mirroredDeclarationPath } from './mirror-declaration-path';
+import { writeFileLocked } from './write-file-locked';
 
 export const writeResolverDeclarations = (
   resolvers: readonly ResolverDefinition[],
@@ -15,6 +16,6 @@ export const writeResolverDeclarations = (
       resolver.sourceFile,
     );
     mkdirSync(dirname(outputFilePath), { recursive: true });
-    writeFileSync(outputFilePath, generateControllerDeclaration(resolver, outputFilePath), 'utf-8');
+    writeFileLocked(outputFilePath, generateControllerDeclaration(resolver, outputFilePath));
   }
 };

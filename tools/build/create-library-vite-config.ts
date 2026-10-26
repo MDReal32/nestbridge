@@ -12,6 +12,7 @@ interface PackageManifest {
 export interface LibraryViteConfigOptions {
   root: string;
   entry?: string;
+  target?: string;
 }
 
 const readPackageManifest = (root: string) => {
@@ -37,7 +38,7 @@ export const createLibraryViteConfig = (options: LibraryViteConfigOptions) => {
   return defineConfig(({ command }) => ({
     plugins: command === 'build' ? dtsPlugins(resolve(options.root, 'tsconfig.json')) : [],
     build: {
-      target: 'esnext',
+      target: options.target ?? 'esnext',
       sourcemap: true,
       ssr: true,
       outDir: 'build',

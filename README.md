@@ -232,6 +232,14 @@ NestBridge mirrors each controller's path under `outputDir`, relative to
 entry above. Add `.nestbridge/` to your `.gitignore`; it's generated on every
 build and on every dev-server start.
 
+Several apps in a monorepo can share one output directory (for example
+`outputDir: '../../.nestbridge'`): the generated declarations only depend on the
+server code. Each declaration is written under a `<file>.lock` lock, skipped when
+its content is unchanged, and swapped in atomically, so parallel dev servers and
+builds never read a half-written file. A lock left by a crashed process is
+broken after 10 seconds; if a live lock is never released, the write fails after
+5 seconds with an error naming the lock file.
+
 ### `NestBridgeOptions`
 
 ```ts

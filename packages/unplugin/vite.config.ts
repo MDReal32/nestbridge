@@ -3,4 +3,5 @@ import { createLibraryViteConfig } from '../../tools/build/create-library-vite-c
 
 export default createLibraryViteConfig({
   root: resolve(import.meta.dirname),
+  target: 'es2022',
 });
