@@ -1,5 +1,11 @@
 # @nestbridge/core
 
+## 2.5.1
+
+### Patch Changes
+
+- Fix `T | null` unions being rejected as unsupported in resolver arguments and model fields, and honour `@Args(..., { nullable: true })` when deriving an argument's GraphQL type.
+
 ## 2.5.0
 
 No changes in this release.

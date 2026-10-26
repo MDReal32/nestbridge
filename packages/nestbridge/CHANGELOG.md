@@ -1,5 +1,13 @@
 # nestbridge
 
+## 2.5.1
+
+### Patch Changes
+
+- @nestbridge/vite@2.5.1
+  - @nestbridge/webpack@2.5.1
+  - @nestbridge/runtime@2.5.1
+
 ## 2.5.0
 
 ### Minor Changes
