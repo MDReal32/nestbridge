@@ -7,6 +7,8 @@ import {
   SyntaxKind,
 } from 'typescript/unstable/ast';
 
+import { isNullishTypeNode } from './is-nullish-type-node';
+
 const PRIMITIVE_SCALAR_TYPES: Record<string, string> = {
   string: 'String',
   number: 'Float',
@@ -37,10 +39,7 @@ const unwrapNullable = (typeNode: TypeNode) => {
     return { inner: typeNode, isNullable: false };
   }
 
-  const nonNullMembers = typeNode.types.filter(
-    (member) =>
-      member.kind !== SyntaxKind.NullKeyword && member.kind !== SyntaxKind.UndefinedKeyword,
-  );
+  const nonNullMembers = typeNode.types.filter((member) => !isNullishTypeNode(member));
   const [onlyMember] = nonNullMembers;
 
   if (nonNullMembers.length !== 1 || onlyMember === undefined) {

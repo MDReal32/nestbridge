@@ -5,6 +5,7 @@ import type { ResolverArgumentDefinition } from '../models/resolver-argument-def
 import { findAnyDecorator, readStaticStringArgument } from './decorator-inspection';
 import { graphqlTypeStringFor, unwrapTypeNode } from './graphql-scalar-type';
 import { locationOf } from './node-location';
+import { readArgsNullableOption } from './read-args-nullable-option';
 import { readArgsTypeOption } from './read-args-type-option';
 
 interface ExtractionContext {
@@ -114,11 +115,12 @@ export const extractResolverArgumentDefinition = (
   }
 
   const explicitType = readArgsTypeOption(decorator);
+  const isNullable = unwrapped.isNullable || readArgsNullableOption(decorator);
 
   return {
     index,
     parameterName: parameter.name.text,
     name: nameArgument.value,
-    graphqlType: graphqlTypeStringFor(unwrapped, explicitType?.typeName),
+    graphqlType: graphqlTypeStringFor({ ...unwrapped, isNullable }, explicitType?.typeName),
   };
 };

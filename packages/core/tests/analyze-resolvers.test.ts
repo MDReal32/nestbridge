@@ -100,4 +100,39 @@ describe('analyzeResolvers', () => {
 
     expect(method?.selection).toEqual([]);
   });
+  describe('nullable unions', () => {
+    const analyze = () => analyzeResolvers([fixture('nullable-union.resolver.ts')]);
+
+    it('reports no diagnostics for null, null-first, null-and-undefined and undefined unions', () => {
+      expect(analyze().diagnostics).toEqual([]);
+    });
+
+    it('maps X | null style arguments to a nullable GraphQL type', () => {
+      const method = analyze().resolvers[0]?.methods[0];
+
+      expect(method?.arguments).toMatchObject([
+        { name: 'id', graphqlType: 'String!' },
+        { name: 'term', graphqlType: 'String' },
+        { name: 'prefix', graphqlType: 'String' },
+        { name: 'suffix', graphqlType: 'String' },
+        { name: 'hint', graphqlType: 'String' },
+        { name: 'limit', graphqlType: 'Float' },
+        { name: 'offset', graphqlType: 'Float!' },
+        { name: 'page', graphqlType: 'Float' },
+      ]);
+    });
+
+    it('includes nullable model fields in the selection set', () => {
+      const method = analyze().resolvers[0]?.methods[0];
+
+      expect(method?.selection).toEqual([
+        { name: 'id' },
+        { name: 'name' },
+        { name: 'nickname' },
+        { name: 'note' },
+        { name: 'label' },
+        { name: 'tags' },
+      ]);
+    });
+  });
 });
