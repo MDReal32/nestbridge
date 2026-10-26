@@ -1,5 +1,12 @@
 # @nestbridge/unplugin
 
+## 2.4.2
+
+### Patch Changes
+
+- 1a60620: Write generated declarations under a `<file>.lock` lock, skip unchanged files and replace changed ones atomically, so several apps can safely share one `outputDir`.
+- @nestbridge/core@2.4.2
+
 ## 2.4.1
 
 ### Patch Changes

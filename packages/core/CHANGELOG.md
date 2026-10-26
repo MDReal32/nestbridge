@@ -1,5 +1,9 @@
 # @nestbridge/core
 
+## 2.4.2
+
+No changes in this release.
+
 ## 2.4.1
 
 ### Patch Changes
