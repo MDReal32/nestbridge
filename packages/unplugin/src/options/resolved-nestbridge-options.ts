@@ -5,6 +5,7 @@ export interface ResolvedNestBridgeOptions {
   name: string | undefined;
   controllers: string[];
   resolvers: string[];
+  messagePatterns: boolean;
   baseURL: string | undefined;
   bootstrap: string | undefined;
   globalPrefix: GlobalPrefix | false | undefined;

@@ -2,6 +2,66 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "http-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "http-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "http-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "http-client", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "graphql-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "graphql-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "graphql-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "graphql-client", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "mixed-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "mixed-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "mixed-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "mixed-client", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "observable-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "observable-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "observable-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "observable-client", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "streamable-file-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "streamable-file-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "streamable-file-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "streamable-file-client", "run", "dev"],
+      "port": 5173
+    },
+    {
       "name": "error-handling-server",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["workspace", "error-handling-server", "run", "dev"],

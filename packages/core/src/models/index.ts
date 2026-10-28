@@ -1,5 +1,6 @@
 export type { ApplicationRouting } from './application-routing';
 export type { BootstrapDetection } from './bootstrap-detection';
+export type { ControllerAnalysisOptions } from './controller-analysis-options';
 export type { ControllerAnalysisResult } from './controller-analysis-result';
 export type { ControllerDefinition } from './controller-definition';
 export type { ControllerMethodDefinition } from './controller-method-definition';
@@ -14,6 +15,10 @@ export type { GraphqlOperationKind } from './graphql-operation-kind';
 export { GRAPHQL_OPERATION_DECORATOR_NAMES } from './graphql-operation-kind';
 export type { HttpMethod } from './http-method';
 export { HTTP_METHOD_DECORATOR_NAMES } from './http-method';
+export type { MessageHandlerDefinition } from './message-handler-definition';
+export type { MessageKind } from './message-kind';
+export { MESSAGE_PATTERN_DECORATOR_NAMES } from './message-kind';
+export type { MessagePattern } from './message-pattern';
 export type { ResolverAnalysisResult } from './resolver-analysis-result';
 export type { ResolverArgumentDefinition } from './resolver-argument-definition';
 export type { ResolverDefinition } from './resolver-definition';

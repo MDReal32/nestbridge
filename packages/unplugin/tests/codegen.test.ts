@@ -20,6 +20,7 @@ const controller = (methods: ControllerMethodDefinition[]) => ({
   path: 'users',
   sourceFile: '/fake/users.controller.ts',
   methods,
+  messageHandlers: [],
 });
 
 describe('generateControllerModule', () => {

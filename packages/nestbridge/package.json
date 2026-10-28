@@ -20,6 +20,10 @@
     "./webpack": {
       "types": "./build/webpack.d.ts",
       "import": "./build/webpack.js"
+    },
+    "./microservices": {
+      "types": "./build/microservices.d.ts",
+      "import": "./build/microservices.js"
     }
   },
   "files": [

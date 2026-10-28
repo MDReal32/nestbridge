@@ -76,6 +76,26 @@ const acquireLock = (lockPath: string, options: Required<WriteFileLockedOptions>
 const hasContent = (filePath: string, content: string) =>
   existsSync(filePath) && readFileSync(filePath, 'utf-8') === content;
 
+export const lockFile = (filePath: string, options: WriteFileLockedOptions = {}) =>
+  acquireLock(`${filePath}${LOCK_FILE_SUFFIX}`, {
+    timeoutMs: options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS,
+    staleAfterMs: options.staleAfterMs ?? DEFAULT_STALE_LOCK_MS,
+  });
+
+/**
+ * Swaps the content in through a rename. Callers must hold the file's lock.
+ */
+export const writeFileAtomically = (filePath: string, content: string) => {
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+
+  try {
+    writeFileSync(temporaryPath, content, 'utf-8');
+    renameSync(temporaryPath, filePath);
+  } finally {
+    rmSync(temporaryPath, { force: true });
+  }
+};
+
 export const writeFileLocked = (
   filePath: string,
   content: string,
@@ -85,22 +105,11 @@ export const writeFileLocked = (
     return;
   }
 
-  const lockPath = `${filePath}${LOCK_FILE_SUFFIX}`;
-  using _lock = acquireLock(lockPath, {
-    timeoutMs: options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS,
-    staleAfterMs: options.staleAfterMs ?? DEFAULT_STALE_LOCK_MS,
-  });
+  using _lock = lockFile(filePath, options);
 
   if (hasContent(filePath, content)) {
     return;
   }
 
-  const temporaryPath = `${filePath}.${process.pid}.tmp`;
-
-  try {
-    writeFileSync(temporaryPath, content, 'utf-8');
-    renameSync(temporaryPath, filePath);
-  } finally {
-    rmSync(temporaryPath, { force: true });
-  }
+  writeFileAtomically(filePath, content);
 };

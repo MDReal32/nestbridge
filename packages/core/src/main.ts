@@ -13,6 +13,7 @@ export { formatDiagnostic, NestBridgeDiagnosticError } from './diagnostics';
 export type {
   ApplicationRouting,
   BootstrapDetection,
+  ControllerAnalysisOptions,
   ControllerAnalysisResult,
   ControllerDefinition,
   ControllerMethodDefinition,
@@ -22,6 +23,9 @@ export type {
   GlobalPrefixExclusion,
   GraphqlOperationKind,
   HttpMethod,
+  MessageHandlerDefinition,
+  MessageKind,
+  MessagePattern,
   ParameterSourceKind,
   ResolverAnalysisResult,
   ResolverArgumentDefinition,

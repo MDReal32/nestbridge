@@ -216,4 +216,47 @@ describe('generateControllerDeclaration', () => {
       "findOne(...args: Parameters<__ServerWidgetsController['findOne']>): __NestBridgeWrapped<__ServerWidgetsController['findOne']>;",
     );
   });
+
+  it('declares message handlers next to HTTP methods, typed from the server class', () => {
+    const { controllers } = analyzeControllers([fixture('emails.controller.ts')], {
+      messagePatterns: true,
+    });
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/emails.controller.d.ts'),
+    );
+
+    expect(declaration).toContain("import type { RemoteResult } from 'nestbridge';");
+    expect(declaration).toContain(
+      "import type { NestBridgeMessageResult } from 'nestbridge/microservices';",
+    );
+    expect(declaration).toContain(
+      "  find(...args: Parameters<__ServerEmailsController['find']>): RemoteResult<__ServerEmailsController['find']>;\n" +
+        "  handleEmailRequested(payload: Parameters<__ServerEmailsController['handleEmailRequested']>[0]): Promise<void>;\n",
+    );
+    expect(declaration).toContain(
+      "  count(): Promise<NestBridgeMessageResult<ReturnType<__ServerEmailsController['count']>>>;",
+    );
+    expect(declaration).toContain(
+      "  sum(payload: Parameters<__ServerEmailsController['sum']>[1]): Promise<NestBridgeMessageResult<ReturnType<__ServerEmailsController['sum']>>>;",
+    );
+  });
+
+  it('imports nothing from nestbridge for a controller with only events', () => {
+    const declaration = generateControllerDeclaration(
+      {
+        name: 'AuditController',
+        sourceFile: fixture('audit.controller.ts'),
+        methods: [],
+        messageHandlers: [{ name: 'record', kind: 'event', payloadParameterIndex: 0 }],
+      },
+      fixture('generated/audit.controller.d.ts'),
+    );
+
+    expect(declaration).not.toContain("from 'nestbridge'");
+    expect(declaration).not.toContain("from 'nestbridge/microservices'");
+    expect(declaration).toContain(
+      "  record(payload: Parameters<__ServerAuditController['record']>[0]): Promise<void>;",
+    );
+  });
 });
