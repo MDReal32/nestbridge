@@ -1,5 +1,13 @@
 # @nestbridge/vite
 
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies [d6d1e38]
+- Updated dependencies [6552c01]
+  - @nestbridge/unplugin@2.6.0
+
 ## 2.5.1
 
 ### Patch Changes
