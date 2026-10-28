@@ -48,7 +48,9 @@ const startInVite = (options: NestBridgeOptions | NestBridgeOptions[]) => {
   const plugin = nestBridgeUnplugin.raw(options, meta);
   const configResolved = plugin.vite?.configResolved;
   const handler = typeof configResolved === 'function' ? configResolved : configResolved?.handler;
-  Reflect.apply(handler ?? (() => {}), undefined, [{ root: multiAppRoot, logger: bundlerLogger }]);
+  Reflect.apply(handler ?? (() => {}), undefined, [
+    { root: multiAppRoot, logger: bundlerLogger, command: 'serve', build: { watch: null } },
+  ]);
   plugin.buildStart?.call(buildContext);
   return plugin;
 };
@@ -153,7 +155,7 @@ describe('nestBridgeUnplugin log level', () => {
     const plugin = nestBridgeUnplugin.raw(dynamic(), { ...meta, framework: 'webpack' });
     const getInfrastructureLogger = vi.fn(() => bundlerLogger);
     Reflect.apply(plugin.webpack ?? (() => {}), undefined, [
-      { options: { context: multiAppRoot }, getInfrastructureLogger },
+      { options: { context: multiAppRoot }, getInfrastructureLogger, watchMode: true },
     ]);
 
     plugin.buildStart?.call(buildContext);

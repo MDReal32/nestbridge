@@ -1098,9 +1098,9 @@ nested field resolvers. Only methods decorated with `@Query()` or `@Mutation()`
 are exposed on the client.
 
 Diagnostics print the file, line and column. In a one-shot build (`vite build`,
-a webpack production build) they throw and fail the build; in watch mode
-(`vite`, webpack `--watch`) they are logged as warnings so the dev server keeps
-running. `debug: true` in `NestBridgeOptions` additionally logs
+a webpack build without `--watch`) they throw and fail the build; in watch mode
+(the Vite dev server, Vitest, `vite build --watch`, webpack `--watch` and
+webpack-dev-server) they are logged as warnings so the dev server keeps running. `debug: true` in `NestBridgeOptions` additionally logs
 controller/resolver discovery, analysis, and watch activity.
 
 ### Hiding NestBridge logs

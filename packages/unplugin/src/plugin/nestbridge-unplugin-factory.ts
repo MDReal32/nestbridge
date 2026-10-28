@@ -22,6 +22,9 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
   let bundlerRoot: string | undefined;
   let apps: NestBridgeApp[] = [];
   let bundlerLogger: BundlerLogger = consoleLogger;
+  let readBundlerWatchMode: (() => boolean) | undefined;
+
+  const isWatchMode = () => meta.watchMode ?? readBundlerWatchMode?.();
 
   const loggerOf = (app: NestBridgeApp) => createLevelLogger(app.options.logLevel, bundlerLogger);
 
@@ -33,15 +36,17 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
   };
 
   const analyzeApps = (targets: readonly NestBridgeApp[]) => {
+    const watchMode = isWatchMode();
+
     for (const app of targets) {
       const { controllerCount, resolverCount, diagnostics, problems } = app.analyze();
 
       reportMessages(
         problems.map((problem) => `[nestbridge] ${problem}`),
-        meta.watchMode,
+        watchMode,
         loggerOf(app),
       );
-      reportDiagnostics(diagnostics, meta.watchMode, loggerOf(app));
+      reportDiagnostics(diagnostics, watchMode, loggerOf(app));
       log(
         app,
         `analyzed ${controllerCount} controller(s), ${resolverCount} resolver(s), ` +
@@ -51,7 +56,7 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
 
     reportMessages(
       findOverlappingFiles(apps).map((problem) => `[nestbridge] ${problem}`),
-      meta.watchMode,
+      watchMode,
       createLevelLogger(
         mostVerboseLogLevel(apps.map((app) => app.options.logLevel)),
         bundlerLogger,
@@ -118,12 +123,16 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
         baseRoot = config.root;
         bundlerRoot = config.root;
         bundlerLogger = config.logger;
+
+        const watching = config.command === 'serve' || Boolean(config.build.watch);
+        readBundlerWatchMode = () => watching;
       },
     },
 
     webpack(compiler) {
       bundlerRoot = compiler.options.context ?? bundlerRoot;
       bundlerLogger = compiler.getInfrastructureLogger('nestbridge');
+      readBundlerWatchMode = () => compiler.watchMode;
     },
   } satisfies UnpluginOptions;
 });
