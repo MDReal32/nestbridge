@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   type ApplicationRouting,
   detectErrorResponseShape,
@@ -9,6 +9,10 @@ import {
 } from '@nestbridge/core';
 import { generateControllerModule, generateResolverModule } from '../codegen';
 import {
+  claimDeclarations,
+  DECLARATION_CLAIM_FILE_NAME,
+  type DeclarationClaim,
+  mirroredPath,
   writeControllerDeclarations,
   writeErrorBodyDeclaration,
   writeResolverDeclarations,
@@ -16,6 +20,7 @@ import {
 import { discoverFiles, resolveBootstrapFile } from '../discovery';
 import type { ResolvedNestBridgeOptions } from '../options';
 import { createControllerRegistry } from './controller-registry';
+import { describeDeclarationConflict } from './describe-declaration-conflict';
 import type { NestBridgeAppAnalysis } from './nestbridge-app-analysis';
 import type { NestBridgeAppLocation } from './nestbridge-app-location';
 import { normalizePath } from './normalize-path';
@@ -43,8 +48,16 @@ export const createNestBridgeApp = (
     root,
     bundlerRoot: location.bundlerRoot,
   });
-  const controllerRegistry = createControllerRegistry(options.controllers, root);
+  const controllerRegistry = createControllerRegistry(options.controllers, root, {
+    messagePatterns: options.messagePatterns,
+  });
   const resolverRegistry = createResolverRegistry(options.resolvers, root);
+  const claimPath = mirroredPath(
+    output.mirrorRoot,
+    output.declarationDir,
+    join(root, DECLARATION_CLAIM_FILE_NAME),
+  );
+  const caller = normalizePath(location.bundlerRoot ?? location.baseRoot);
   let bootstrapFilePath: string | undefined;
 
   const describeApp = () => (options.name === undefined ? 'the app' : `app "${options.name}"`);
@@ -95,14 +108,25 @@ export const createNestBridgeApp = (
     const { controllers, diagnostics: controllerDiagnostics } = controllerRegistry.refresh(routing);
     const { resolvers, diagnostics: resolverDiagnostics } = resolverRegistry.refresh();
 
-    writeControllerDeclarations(
-      controllers,
-      output.mirrorRoot,
-      output.declarationDir,
-      responseWrapper,
-    );
-    writeResolverDeclarations(resolvers, output.mirrorRoot, output.declarationDir);
-    writeErrorBodyDeclaration(output.errorBodyDir, errorResponseShape);
+    const claim: DeclarationClaim = {
+      caller,
+      messagePatterns: options.messagePatterns,
+      bootstrap: bootstrapFilePath ?? null,
+    };
+    const owner = claimDeclarations(claimPath, claim);
+
+    if (owner === undefined) {
+      writeControllerDeclarations(
+        controllers,
+        output.mirrorRoot,
+        output.declarationDir,
+        responseWrapper,
+      );
+      writeResolverDeclarations(resolvers, output.mirrorRoot, output.declarationDir);
+      writeErrorBodyDeclaration(output.errorBodyDir, errorResponseShape);
+    } else {
+      problems.push(describeDeclarationConflict(options.name, output.declarationDir, owner, claim));
+    }
 
     return {
       controllerCount: controllers.length,

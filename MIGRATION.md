@@ -1,3 +1,73 @@
+# Migrating from nestrelay
+
+2.6 adds `@EventPattern` / `@MessagePattern` handlers as a third NestBridge transport, replacing the
+`nestrelay` library. Nothing changes for existing NestBridge apps: the new `messagePatterns` option is off by
+default. See [Microservice controllers](README.md#microservice-controllers) for the full reference.
+
+## Plugin
+
+Remove `nestRelayUnplugin` and add the provider as a NestBridge app with `messagePatterns: true`. There is no
+workspace auto-discovery, so each provider gets an entry, and its `name` is the service name the runtime uses:
+
+```ts
+plugins: [
+  nestBridge([
+    { name: 'catalog', root: '../catalog', controllers: 'src/**/*.controller.ts' },
+    { name: 'notifications', root: '../notifications', controllers: 'src/**/*.controller.ts', messagePatterns: true },
+  ]),
+],
+resolve: {
+  alias: {
+    '@notifications': path.resolve(import.meta.dirname, '../notifications/src'),
+  },
+},
+```
+
+## Imports and `paths`
+
+Import the provider's real controller through your alias instead of the virtual `@nestrelay/` specifier:
+
+```diff
+- import { EmailsController } from '@nestrelay/notifications/emails/emails.controller';
++ import { EmailsController } from '@notifications/emails/emails.controller';
+```
+
+Point the alias's tsconfig `paths` entry at the generated declarations under `.nestbridge/<name>/…`, like any other
+NestBridge app, and remove the `@nestrelay/*` entry and the `.nestrelay/` folder.
+
+## Runtime
+
+| nestrelay | NestBridge |
+| --- | --- |
+| `configureNestRelay({ notifications: client })` | `configureNestBridgeMicroservices({ clients: { notifications: client } })` |
+| RabbitMQ default from `RABBITMQ_URL` and `<service>_queue` | `defaultClient: (service) => options`, written by the caller |
+| `closeNestRelay()` | `closeNestBridgeMicroservices()` |
+| `relayEmit(service, pattern, payload)` | `emitMessage({ service, pattern, payload })` |
+| `relaySend(service, pattern, payload)` | `sendMessage({ service, pattern, payload })` |
+
+All of them come from `nestbridge/microservices`. There is no built-in broker default; to keep nestrelay's
+behaviour, configure it once:
+
+```ts
+configureNestBridgeMicroservices({
+  defaultClient: (service) => ({
+    transport: Transport.RMQ,
+    options: { urls: [env.RABBITMQ_URL], queue: `${service}_queue`, queueOptions: { durable: true } },
+  }),
+});
+```
+
+A service without a client now rejects with a `NestBridgeMicroserviceError` naming the service.
+
+## What changed in behaviour
+
+- Generated classes are plain classes, not `Injectable()`. Nest still instantiates them as providers, because
+  they have no constructor dependencies.
+- An unsupported pattern no longer throws for the whole build. It gives an `unsupported-message-pattern`
+  diagnostic that drops that method; a one-shot build still fails on it, and watch mode logs it.
+- The manifest (`manifest.json`, builds without the provider's source) is not supported. A caller needs the
+  provider's source at build time, as with HTTP and GraphQL controllers.
+
 # Migrating from 2.1 to 2.2
 
 2.2 adds support for several server apps in one client, `@Controller({ path, version })` and `@Version`, and reads

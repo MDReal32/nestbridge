@@ -1,6 +1,6 @@
 {
   "name": "@nestbridge/runtime",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -14,6 +14,10 @@
     ".": {
       "types": "./build/nestbridge.runtime.d.ts",
       "import": "./build/nestbridge.runtime.js"
+    },
+    "./microservices": {
+      "types": "./build/nestbridge.runtime.microservices.d.ts",
+      "import": "./build/nestbridge.runtime.microservices.js"
     }
   },
   "files": [
@@ -26,7 +30,11 @@
     "lint": "biome check ."
   },
   "devDependencies": {
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/microservices": "^12.0.1",
     "@types/node": "^26.4.1",
+    "reflect-metadata": "^0.2.2",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vite-plugin-dts": "^5.1.0",
@@ -34,5 +42,13 @@
   },
   "dependencies": {
     "rxjs": "^7.8.2"
+  },
+  "peerDependencies": {
+    "@nestjs/microservices": "^12.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/microservices": {
+      "optional": true
+    }
   }
 }

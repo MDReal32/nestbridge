@@ -11,7 +11,8 @@
     "lint": "biome check ."
   },
   "dependencies": {
-    "@nestbridge/runtime": "workspace:*"
+    "@nestbridge/runtime": "workspace:*",
+    "nestbridge": "workspace:*"
   },
   "devDependencies": {
     "@nestbridge/vite": "workspace:*",

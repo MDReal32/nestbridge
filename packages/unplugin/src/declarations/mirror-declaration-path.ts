@@ -1,17 +1,7 @@
-import { join, relative } from 'node:path';
-
-const stripLeadingParentSegments = (relativePath: string) => {
-  const segments = relativePath.split(/[\\/]/);
-  const firstOwnedIndex = segments.findIndex((segment) => segment !== '..');
-  return segments.slice(firstOwnedIndex === -1 ? segments.length : firstOwnedIndex).join('/');
-};
+import { mirroredPath } from './mirrored-path';
 
 export const mirroredDeclarationPath = (
   sourceRoot: string,
   resolvedOutputDir: string,
   controllerFilePath: string,
-) => {
-  const relativePath = relative(sourceRoot, controllerFilePath);
-  const mirroredPath = stripLeadingParentSegments(relativePath).replace(/\.ts$/, '.d.ts');
-  return join(resolvedOutputDir, mirroredPath);
-};
+) => mirroredPath(sourceRoot, resolvedOutputDir, controllerFilePath).replace(/\.ts$/, '.d.ts');

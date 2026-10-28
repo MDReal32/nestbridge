@@ -10,6 +10,7 @@ describe('resolveNestBridgeOptions', () => {
       name: undefined,
       controllers: ['server/**/*.controller.ts'],
       resolvers: [],
+      messagePatterns: false,
       baseURL: undefined,
       bootstrap: undefined,
       globalPrefix: undefined,
@@ -40,6 +41,22 @@ describe('resolveNestBridgeOptions', () => {
 
     expect(quiet?.logLevel).toBe('error');
     expect(inherited?.logLevel).toBeUndefined();
+  });
+
+  it('passes messagePatterns through for a named app', () => {
+    const [entry] = resolveNestBridgeOptions({
+      name: 'notifications',
+      controllers: 'a',
+      messagePatterns: true,
+    });
+
+    expect(entry?.messagePatterns).toBe(true);
+  });
+
+  it('rejects messagePatterns on an app without a name, even when it is the only app', () => {
+    expect(() => resolveNestBridgeOptions({ controllers: 'a', messagePatterns: true })).toThrow(
+      'App #1 sets `messagePatterns` and needs a `name`',
+    );
   });
 
   it('rejects an unknown logLevel', () => {

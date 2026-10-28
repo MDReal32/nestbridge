@@ -115,6 +115,7 @@ interface NestBridgeOptions {
   name?: string;                    // names the server app; required, and unique, when you pass several apps
   controllers: string | string[];   // glob(s), resolved relative to `root`
   resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
+  messagePatterns?: boolean;        // exposes @EventPattern/@MessagePattern handlers of `controllers`; needs `name`; defaults to false
   baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
   bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it

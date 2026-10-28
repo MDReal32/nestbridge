@@ -2,6 +2,7 @@ import {
   type ApplicationRouting,
   analyzeControllers,
   applyApplicationRouting,
+  type ControllerAnalysisOptions,
   type ControllerDefinition,
   type NestBridgeDiagnostic,
 } from '@nestbridge/core';
@@ -23,6 +24,7 @@ export interface ControllerRegistry {
 export const createControllerRegistry = (
   patterns: readonly string[],
   root: string,
+  analysisOptions: ControllerAnalysisOptions,
 ): ControllerRegistry => {
   const controllersByFile = new Map<string, ControllerDefinition>();
 
@@ -30,7 +32,7 @@ export const createControllerRegistry = (
     controllersByFile.clear();
 
     const files = discoverFiles(patterns, root);
-    const { controllers: analyzed, diagnostics } = analyzeControllers(files);
+    const { controllers: analyzed, diagnostics } = analyzeControllers(files, analysisOptions);
     const controllers = applyApplicationRouting(analyzed, routing);
 
     for (const controller of controllers) {

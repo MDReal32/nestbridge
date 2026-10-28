@@ -1,6 +1,10 @@
 import { resolve } from 'node:path';
-import { createLibraryViteConfig } from '../../tools/build/create-library-vite-config';
+import { createMultiEntryLibraryViteConfig } from '../../tools/build/create-library-vite-config';
 
-export default createLibraryViteConfig({
+export default createMultiEntryLibraryViteConfig({
   root: resolve(import.meta.dirname),
+  entries: {
+    'nestbridge.runtime': 'src/main.ts',
+    'nestbridge.runtime.microservices': 'src/microservices.ts',
+  },
 });

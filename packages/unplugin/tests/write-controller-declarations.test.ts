@@ -50,6 +50,7 @@ describe('writeControllerDeclarations', () => {
         column: 1,
       },
     ],
+    messageHandlers: [],
   };
 
   it('writes a declaration file mirroring the controller path under the output directory', () => {
