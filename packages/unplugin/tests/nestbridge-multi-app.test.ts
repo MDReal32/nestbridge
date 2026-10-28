@@ -221,7 +221,9 @@ describe('nestBridgeUnplugin roots', () => {
     );
     const configResolved = plugin.vite?.configResolved;
     const handler = typeof configResolved === 'function' ? configResolved : configResolved?.handler;
-    Reflect.apply(handler ?? (() => {}), undefined, [{ root: multiAppRoot } as ResolvedConfig]);
+    Reflect.apply(handler ?? (() => {}), undefined, [
+      { root: multiAppRoot, command: 'serve', build: { watch: null } } as ResolvedConfig,
+    ]);
 
     plugin.buildStart?.call(buildContext);
 
