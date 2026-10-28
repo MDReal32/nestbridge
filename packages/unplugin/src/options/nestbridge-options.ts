@@ -10,6 +10,13 @@ export interface NestBridgeOptions {
   name?: string;
   controllers: string | string[];
   resolvers?: string | string[];
+  /**
+   * Also turns the controllers' `@EventPattern()` / `@MessagePattern()` handlers into client
+   * methods that publish through `nestbridge/microservices`. Requires `name`, which is the service
+   * the message client is looked up by. Off by default, so browser clients never receive
+   * microservice code.
+   */
+  messagePatterns?: boolean;
   baseURL?: string;
   /**
    * The app's bootstrap file, relative to `root`. Skips the `main.ts` search.

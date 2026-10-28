@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "emitDecoratorMetadata": true,
+    "noEmit": true,
+    "paths": {
+      "@users/*": ["../../../.nestbridge/users/examples/microservices/users/src/*"]
+    }
+  },
+  "include": ["src", "scripts", "tests", "vite.config.ts", "typecheck-fixtures"]
+}

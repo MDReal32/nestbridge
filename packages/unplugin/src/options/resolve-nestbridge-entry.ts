@@ -15,6 +15,7 @@ export const resolveNestBridgeEntry = (options: NestBridgeOptions): ResolvedNest
   name: options.name,
   controllers: toArray(options.controllers),
   resolvers: toArray(options.resolvers),
+  messagePatterns: options.messagePatterns ?? false,
   baseURL: options.baseURL,
   bootstrap: options.bootstrap,
   globalPrefix: resolveGlobalPrefixOption(options.globalPrefix),

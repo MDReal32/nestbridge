@@ -7,5 +7,6 @@ export default createMultiEntryLibraryViteConfig({
     index: 'src/index.ts',
     vite: 'src/vite.ts',
     webpack: 'src/webpack.ts',
+    microservices: 'src/microservices.ts',
   },
 });

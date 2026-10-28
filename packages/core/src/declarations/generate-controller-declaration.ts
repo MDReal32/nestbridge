@@ -1,4 +1,5 @@
 import { dirname, extname, relative } from 'node:path';
+import type { MessageHandlerDefinition } from '../models/message-handler-definition';
 import type { ResponseKind } from '../models/response-kind';
 import type { ResponseWrapperDetection } from '../models/response-wrapper-detection';
 
@@ -14,10 +15,16 @@ interface ClientDeclarationMethod {
   serverOnlyParameterIndexes?: readonly number[];
 }
 
+type ClientDeclarationMessageHandler = Pick<
+  MessageHandlerDefinition,
+  'name' | 'kind' | 'payloadParameterIndex'
+>;
+
 interface ClientDeclarationSource {
   name: string;
   sourceFile: string;
   methods: readonly ClientDeclarationMethod[];
+  messageHandlers?: readonly ClientDeclarationMessageHandler[];
 }
 
 const REMOTE_RESULT_HELPERS: Record<ResponseKind, string> = {
@@ -29,6 +36,10 @@ const REMOTE_RESULT_HELPERS: Record<ResponseKind, string> = {
 const WRAPPED_RESULT_HELPER = '__NestBridgeWrapped';
 
 const ABORTABLE_PROMISE = 'AbortablePromise';
+
+const MESSAGE_RESULT_HELPER = 'NestBridgeMessageResult';
+
+const MESSAGE_PAYLOAD_PARAMETER = 'payload';
 
 const toPosixPath = (filePath: string) => filePath.replace(/\\/g, '/');
 
@@ -82,20 +93,39 @@ export const generateControllerDeclaration = (
     return `  ${method.name}(${parameterListFor(method)}): ${helperName}<${serverAlias}['${method.name}']>;`;
   });
 
-  const classBody = ['  constructor();', '', ...methodDeclarations].join('\n');
+  const messageHandlers = controller.messageHandlers ?? [];
+
+  const messageHandlerDeclarations = messageHandlers.map((handler) => {
+    const serverMethod = `${serverAlias}['${handler.name}']`;
+    const parameterList =
+      handler.payloadParameterIndex === null
+        ? ''
+        : `${MESSAGE_PAYLOAD_PARAMETER}: Parameters<${serverMethod}>[${handler.payloadParameterIndex}]`;
+    const result =
+      handler.kind === 'event' ? 'void' : `${MESSAGE_RESULT_HELPER}<ReturnType<${serverMethod}>>`;
+
+    return `  ${handler.name}(${parameterList}): Promise<${result}>;`;
+  });
+
+  const classBody = [
+    '  constructor();',
+    '',
+    ...methodDeclarations,
+    ...messageHandlerDeclarations,
+  ].join('\n');
 
   const rawHelperNames = controller.methods.map((method) => helperNameFor(method));
   const hasWrappedMethod = rawHelperNames.includes(WRAPPED_RESULT_HELPER);
+  const remoteHelperImports = Array.from(
+    new Set(
+      rawHelperNames.map((name) => (name === WRAPPED_RESULT_HELPER ? ABORTABLE_PROMISE : name)),
+    ),
+  ).sort();
   const helperImports =
-    rawHelperNames.length === 0
+    remoteHelperImports.length === 0 && messageHandlers.length === 0
       ? ['RemoteResult']
-      : Array.from(
-          new Set(
-            rawHelperNames.map((name) =>
-              name === WRAPPED_RESULT_HELPER ? ABORTABLE_PROMISE : name,
-            ),
-          ),
-        ).sort();
+      : remoteHelperImports;
+  const usesMessageResult = messageHandlers.some((handler) => handler.kind === 'message');
 
   const wrappedResultTypeAliasLines =
     responseWrapper !== undefined && hasWrappedMethod
@@ -109,6 +139,9 @@ export const generateControllerDeclaration = (
     `import type { ${controller.name} as ${serverAlias} } from '${importSpecifier}';`,
     ...(helperImports.length > 0
       ? [`import type { ${helperImports.join(', ')} } from 'nestbridge';`]
+      : []),
+    ...(usesMessageResult
+      ? [`import type { ${MESSAGE_RESULT_HELPER} } from 'nestbridge/microservices';`]
       : []),
     '',
     '/**',

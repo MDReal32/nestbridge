@@ -5,7 +5,8 @@ export type NestBridgeDiagnosticCode =
   | 'unsupported-return-type'
   | 'circular-type'
   | 'unsupported-global-prefix'
-  | 'unsupported-versioning';
+  | 'unsupported-versioning'
+  | 'unsupported-message-pattern';
 
 export interface NestBridgeDiagnostic {
   code: NestBridgeDiagnosticCode;

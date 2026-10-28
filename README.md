@@ -39,6 +39,7 @@ types all work as if you were calling the controller directly.
 - [A NestJS controller, unmodified](#a-nestjs-controller-unmodified)
 - [A GraphQL resolver, unmodified](#a-graphql-resolver-unmodified)
 - [The frontend](#the-frontend)
+- [Microservice controllers](#microservice-controllers)
 - [Supported decorators](#supported-decorators)
 - [Types are projected, not regenerated](#types-are-projected-not-regenerated)
 - [Observables and streamed files](#observables-and-streamed-files)
@@ -150,7 +151,11 @@ Each app under [`examples/`](examples) (`error-handling`, `graphql`, `http`, `mi
 (`client/tests/bundle-verification.test.ts`)
 that builds the client and asserts the production bundle contains none of
 `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`,
-or the real service implementation.
+or the real service implementation. `examples/microservices` has two Nest
+microservices instead, `users` and `posts`; its test
+(`posts/tests/end-to-end.test.ts`) builds and boots both over TCP, calls `posts`,
+which calls `users` end to end, and asserts the `posts` bundle has no `users`
+implementation.
 
 ## Installation
 
@@ -256,6 +261,7 @@ interface NestBridgeOptions {
   name?: string;                    // names the server app; required, and unique, when you pass several apps
   controllers: string | string[];   // glob(s), resolved relative to `root`
   resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
+  messagePatterns?: boolean;        // exposes @EventPattern/@MessagePattern handlers of `controllers`; needs `name`; defaults to false
   baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
   bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
@@ -352,9 +358,18 @@ Each entry is a complete, independent app:
   relative `root` resolves against Vite's `root` (`process.cwd()` under
   webpack).
 - **Declarations** are written under `<outputDir>/<name>/`, mirroring each
-  file's path relative to `root` — hence the `paths` entries above. A single
-  app without a `name` keeps the flat layout. The error body declaration moves
-  with them: `<outputDir>/<name>/nestbridge-error-body.d.ts`.
+  file's path the same way as a single app (relative to the workspace root by
+  default) — hence the `paths` entries above. A single app without a `name`
+  keeps the flat layout. The error body declaration moves with them:
+  `<outputDir>/<name>/nestbridge-error-body.d.ts`.
+- **One name, one configuration.** Builds in the same workspace that use the
+  same name for the same server share its declarations, so they must agree on
+  the options that shape them: `messagePatterns` and the bootstrap file. The
+  first build records itself in a `nestbridge-app.json` next to them; a later
+  build that configures the app differently gets an error naming the other
+  build and leaves the declarations alone. Give one of them another `name`, or
+  match the options. A build may always change its own options, and takes over
+  when the recorded build's folder no longer exists.
 - **The bootstrap file** is read per app: the one `main.ts` under its `root`,
   or the file named by `bootstrap`. So one app can register a response
   interceptor, a global prefix and URI versioning while another has none, and
@@ -542,6 +557,145 @@ for the resolver side. Each includes a
 [typecheck fixture](examples/http/client/typecheck-fixtures/api-contract.ts)
 that proves both a valid call and invalid calls (a wrong-typed argument, an
 unexpected constructor argument) resolve exactly as the architecture promises.
+
+## Microservice controllers
+
+`@EventPattern()` and `@MessagePattern()` handlers are a third transport, next
+to HTTP routes and GraphQL resolvers. They let one Nest app call another the
+same way a frontend calls a controller: import the other app's controller
+class, and NestBridge turns it into a client at build time. The handlers live
+on the same `@Controller()` classes, so they use the same `controllers` glob;
+`messagePatterns: true` on an app turns them on. It is off by default, so a
+browser client never receives microservice code.
+
+A `users` microservice, unmodified:
+
+```ts
+@Controller()
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @MessagePattern({ cmd: 'users.find-one' })
+  findOne(@Payload() id: string) {
+    return this.usersService.findOne(id); // User | null
+  }
+
+  @EventPattern(USER_PATTERNS.postPublished)
+  recordPost(@Payload() event: PostPublished) {
+    this.usersService.recordPost(event);
+  }
+}
+```
+
+A `posts` microservice that calls it lists `users` as a NestBridge app in its
+own build:
+
+```ts
+// vite.config.ts of posts
+export default defineConfig({
+  resolve: {
+    alias: { '@users': resolve(import.meta.dirname, '../users/src') },
+  },
+  plugins: [
+    nestBridge({
+      name: 'users',
+      root: '../users',
+      controllers: 'src/**/*.controller.ts',
+      messagePatterns: true,
+    }),
+  ],
+});
+```
+
+An app with `messagePatterns` needs a `name`: it is the service its message
+client is looked up by. One controller can mix routes and patterns; the
+generated class then has both kinds of methods, with `baseURL` used for the
+routes and the message client for the patterns, both keyed by `name`.
+
+The generated class is a plain class with no constructor dependencies, so
+`posts` registers it as a provider and injects it like any other:
+
+```ts
+import { UsersController } from '@users/users/users.controller';
+
+@Module({
+  controllers: [PostsController],
+  providers: [PostsService, UsersController],
+})
+export class PostsModule {}
+
+@Injectable()
+export class PostsService {
+  constructor(private readonly users: UsersController) {}
+
+  async publish(draft: PostDraft) {
+    const author = await this.users.findOne(draft.authorId); // User | null
+    if (!author) {
+      throw new RpcException(`User "${draft.authorId}" does not exist.`);
+    }
+    const post = this.save(draft);
+    await this.users.recordPost({ authorId: author.id, postId: post.id });
+    return post;
+  }
+}
+```
+
+`posts` configures how to reach each service once, in its `main.ts`:
+
+```ts
+import { Transport } from '@nestjs/microservices';
+import { configureNestBridgeMicroservices } from 'nestbridge/microservices';
+
+configureNestBridgeMicroservices({
+  clients: {
+    users: { transport: Transport.TCP, options: { port: 3601 } },
+  },
+  defaultClient: (service) => ({
+    transport: Transport.RMQ,
+    options: { urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'], queue: `${service}_queue` },
+  }),
+});
+```
+
+- An `@EventPattern` method calls `emitMessage()` and resolves with `void`
+  once the event is emitted.
+- A `@MessagePattern` method calls `sendMessage()` and resolves with the
+  handler's result. A `Promise` is unwrapped; an `Observable` resolves with its
+  last value. An error thrown by the handler rejects the call with the error
+  the transport delivers.
+- The payload is the parameter with `@Payload()`. Without one, it is the first
+  parameter when no parameter is decorated. Once any parameter is decorated
+  (such as `@Ctx()`), Nest passes nothing to the undecorated ones, so the
+  method takes no argument and sends `{}`.
+- Message methods return a plain `Promise`, not an `AbortablePromise`.
+
+`nestbridge/microservices` needs `@nestjs/microservices` in the caller. It is
+an optional peer dependency, and the main `nestbridge` entry never imports it.
+
+`configureNestBridgeMicroservices()` takes:
+
+```ts
+interface NestBridgeMicroservicesConfig {
+  clients?: Record<string, ClientOptions | ClientProxy>; // keyed by app `name`
+  defaultClient?: (service: string) => ClientOptions;    // for every service without an entry in `clients`
+}
+```
+
+A client is created on first use and reused for that service. A service with
+neither a `clients` entry nor a `defaultClient` rejects the call with a
+`NestBridgeMicroserviceError` that names the service. Configuring again once a
+client is in use throws; call `closeNestBridgeMicroservices()` first, which
+closes every client and is also what a caller runs on shutdown.
+
+Patterns must be statically known: a string or number literal, an object
+literal of those, or a constant whose type is a literal or an `as const`
+object (`USER_PATTERNS.postPublished` above). Anything else, such as a computed
+value or a spread, gives an `unsupported-message-pattern` diagnostic and the
+method is dropped.
+
+See [`examples/microservices`](examples/microservices): a `users` and a `posts`
+Nest microservice over TCP, where `posts` asks `users` for a post's author and
+emits an event back to it.
 
 ## Supported decorators
 
@@ -1021,6 +1175,7 @@ nestbridge/
     observable/       Observable<T> responses
     streamable-file/  StreamableFile responses
     error-handling/   response-wrapper and exception-filter detection
+    microservices/    two Nest microservices over TCP: posts/ calls users/
       server/  a minimal NestJS app
       client/  a minimal Vite app importing the server's controllers/resolvers directly
 ```

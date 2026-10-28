@@ -8,6 +8,13 @@ import {
   setNestBridgeBaseURL,
   setNestBridgeServiceBaseURL,
 } from '../src/index';
+import {
+  closeNestBridgeMicroservices,
+  configureNestBridgeMicroservices,
+  emitMessage,
+  NestBridgeMicroserviceError,
+  sendMessage,
+} from '../src/microservices';
 import nestBridge from '../src/vite';
 
 describe('nestbridge root facade', () => {
@@ -27,6 +34,16 @@ describe('nestbridge base URL API', () => {
   it('re-exports the global and per-service base URL setters the generated config module calls', () => {
     expect(setNestBridgeBaseURL).toBeTypeOf('function');
     expect(setNestBridgeServiceBaseURL).toBeTypeOf('function');
+  });
+});
+
+describe('nestbridge/microservices facade', () => {
+  it('re-exports the microservices runtime the generated message methods call', () => {
+    expect(configureNestBridgeMicroservices).toBeTypeOf('function');
+    expect(closeNestBridgeMicroservices).toBeTypeOf('function');
+    expect(emitMessage).toBeTypeOf('function');
+    expect(sendMessage).toBeTypeOf('function');
+    expect(NestBridgeMicroserviceError).toBeTypeOf('function');
   });
 });
 

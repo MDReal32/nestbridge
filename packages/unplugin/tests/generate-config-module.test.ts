@@ -6,6 +6,7 @@ const entry = (overrides: Partial<ResolvedNestBridgeOptions>): ResolvedNestBridg
   name: undefined,
   controllers: [],
   resolvers: [],
+  messagePatterns: false,
   baseURL: undefined,
   bootstrap: undefined,
   globalPrefix: undefined,

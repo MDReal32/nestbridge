@@ -173,6 +173,36 @@ try {
   `StreamableFile` (resolves with a `Blob`). All three resolve through an
   `AbortablePromise`.
 
+## Microservices (`@nestbridge/runtime/microservices`)
+
+The client side of `@EventPattern` / `@MessagePattern` handlers, re-exported
+as `nestbridge/microservices`. It needs `@nestjs/microservices`, an optional
+peer dependency; the main entry never imports it.
+
+```ts
+import { Transport } from '@nestjs/microservices';
+import { configureNestBridgeMicroservices } from 'nestbridge/microservices';
+
+configureNestBridgeMicroservices({
+  clients: { billing: { transport: Transport.TCP, options: { port: 3601 } } },
+  defaultClient: (service) => ({ transport: Transport.TCP, options: { host: service } }),
+});
+```
+
+- `configureNestBridgeMicroservices({ clients?, defaultClient? })` — `clients`
+  maps an app `name` to `ClientOptions` or a ready `ClientProxy`;
+  `defaultClient(service)` builds options for every other service. Throws once
+  a client is in use.
+- `closeNestBridgeMicroservices()` — closes every client and allows
+  configuring again.
+- `emitMessage({ service, pattern, payload })` / `sendMessage({ service, pattern, payload })` —
+  what generated event and message methods call. A client is created on first
+  use per service; a service without one rejects with a
+  `NestBridgeMicroserviceError` carrying its `service`.
+- `NestBridgeMessageResult<T>` — the result type of a generated message method:
+  the handler's return type with `Promise` unwrapped and `Observable<V>` read
+  as `V`.
+
 ## License
 
 MIT

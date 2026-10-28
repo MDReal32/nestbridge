@@ -19,6 +19,7 @@ const controller = (...methods: ControllerMethodDefinition[]): ControllerDefinit
   path: 'users',
   sourceFile: '/server/users.controller.ts',
   methods,
+  messageHandlers: [],
 });
 
 const pathsOf = (controllers: readonly ControllerDefinition[]) =>

@@ -17,6 +17,12 @@ export const validateNestBridgeEntries = (entries: readonly ResolvedNestBridgeOp
       );
     }
 
+    if (entry.messagePatterns && entry.name === undefined) {
+      throw new Error(
+        `[nestbridge] App #${index + 1} sets \`messagePatterns\` and needs a \`name\`, the service its message client is looked up by.`,
+      );
+    }
+
     if (entry.name === undefined) {
       if (entries.length > 1) {
         throw new Error(

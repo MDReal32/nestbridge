@@ -39,6 +39,13 @@ route states none (an array of versions uses its first entry). Anything it
 can't safely resolve statically (a non-literal route path or version, an
 unsupported decorator) becomes a `NestBridgeDiagnostic` instead of a guess.
 
+With `analyzeControllers(filePaths, { messagePatterns: true })`, each
+definition's `messageHandlers` also lists the `@EventPattern` /
+`@MessagePattern` methods: name, `kind` (`'event'` | `'message'`), the
+statically read `pattern`, and `payloadParameterIndex`. A pattern that is not
+statically known gives an `unsupported-message-pattern` diagnostic. Without
+the option, `messageHandlers` is empty.
+
 ```ts
 import { analyzeControllers } from '@nestbridge/core';
 
