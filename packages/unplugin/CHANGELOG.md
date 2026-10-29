@@ -1,5 +1,11 @@
 # @nestbridge/unplugin
 
+## 2.6.1
+
+### Patch Changes
+
+- @nestbridge/core@2.6.1
+
 ## 2.6.0
 
 ### Minor Changes

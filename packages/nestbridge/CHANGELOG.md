@@ -1,5 +1,14 @@
 # nestbridge
 
+## 2.6.1
+
+### Patch Changes
+
+- Republish 2.6.0 with corrected release notes.
+- @nestbridge/runtime@2.6.1
+  - @nestbridge/vite@2.6.1
+  - @nestbridge/webpack@2.6.1
+
 ## 2.6.0
 
 ### Minor Changes
