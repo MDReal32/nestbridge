@@ -20,6 +20,8 @@
     "@nestbridge/monorepo",
     "http-client",
     "http-server",
+    "interceptors-client",
+    "interceptors-server",
     "graphql-client",
     "graphql-server",
     "observable-client",

@@ -45,7 +45,7 @@ types all work as if you were calling the controller directly.
 - [Observables and streamed files](#observables-and-streamed-files)
 - [Cancelling a call](#cancelling-a-call)
 - [Global prefix and URI versioning](#global-prefix-and-uri-versioning)
-- [Auto-detected global response wrapper](#auto-detected-global-response-wrapper)
+- [Auto-detected response-shaping interceptors](#auto-detected-response-shaping-interceptors)
 - [Auto-detected exception filter error body](#auto-detected-exception-filter-error-body)
 - [Unsupported (by design, for this MVP)](#unsupported-by-design-for-this-mvp)
 - [DTOs](#dtos)
@@ -151,7 +151,7 @@ Each app under [`examples/`](examples) (`error-handling`, `graphql`, `http`, `mi
 (`client/tests/bundle-verification.test.ts`)
 that builds the client and asserts the production bundle contains none of
 `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`,
-or the real service implementation. `examples/microservices` has two Nest
+or the real service implementation. The `graphql` client also uses the `observable` server as a second app. `examples/microservices` has two Nest
 microservices instead, `users` and `posts`; its test
 (`posts/tests/end-to-end.test.ts`) builds and boots both over TCP, calls `posts`,
 which calls `users` end to end, and asserts the `posts` bundle has no `users`
@@ -201,8 +201,9 @@ export default defineConfig({
   },
   plugins: [
     nestBridge({
-      controllers: '../server/src/**/*.controller.ts',
-      resolvers: '../server/src/**/*.resolver.ts',
+      root: '../server',
+      controllers: 'src/**/*.controller.ts',
+      resolvers: 'src/**/*.resolver.ts',
       baseURL: '/api',
     }),
   ],
@@ -220,7 +221,7 @@ instead:
 {
   "compilerOptions": {
     "paths": {
-      "@server/*": ["../../../.nestbridge/apps/web/server/src/*"]
+      "@server/*": ["../../../.nestbridge/web-server/src/*"]
     }
   }
 }
@@ -229,24 +230,36 @@ instead:
 `paths` entries resolve relative to the `tsconfig.json` that declares them, so
 no `baseUrl` is needed (TypeScript 7 removed that option).
 
+`root` points at the server package: the folder holding its `package.json`. The
+globs, the bootstrap file and the declaration paths are all relative to it, and
+the package `name` (`web-server` here) names the folder the declarations go to.
+
 NestBridge writes the generated declarations to a `.nestbridge/` folder at the
 **workspace root** — the nearest ancestor containing `nx.json`,
 `pnpm-workspace.yaml`, `turbo.json`, `lerna.json` or a `package.json` with
-`workspaces` — and mirrors each controller's path under it relative to that
-root. With no workspace it falls back to `.nestbridge/` in the project root and
-mirrors paths relative to `root`, stripping any leading `../` segments. For a
-client at `apps/web/client` with the controller glob
-`../server/src/**/*.controller.ts`, `items.controller.ts` ends up at
-`.nestbridge/apps/web/server/src/items/items.controller.d.ts` — hence the
-`paths` entry above (which is `../../../.nestbridge/…` from `apps/web/client`).
-Add `.nestbridge/` to your `.gitignore`; it's generated on every build and on
-every dev-server start.
+`workspaces`. With no workspace it falls back to `.nestbridge/` in the project
+root. Each server gets one folder inside it, named after the package at `root`,
+and each controller's path is mirrored under that folder relative to `root`
+(stripping any leading `../` segments). With `root: '../server'` and a server
+package named `web-server`, `items.controller.ts` ends up at
+`.nestbridge/web-server/src/items/items.controller.d.ts` — hence the `paths`
+entry above (which is `../../../.nestbridge/…` from `apps/web/client`). A scoped
+name nests: `@acme/api` writes to `.nestbridge/@acme/api/`. The `name` option
+does not affect any path; it only names the runtime service.
 
-Because the folder is shared, apps in the same workspace reuse one copy of each
-declaration, and two apps whose servers live in different folders never
-overwrite each other. Setting `outputDir` explicitly opts out: it is resolved
-from the bundler's own root and keeps the per-project layout
-(`<outputDir>/server/src/…`).
+Besides the declarations, the folder holds, when the server registers a global
+exception filter, `error-body.d.ts`
+(see [Auto-detected exception filter error body](#auto-detected-exception-filter-error-body)).
+If `root` has no `package.json`, or it has no `name`, the build fails with an
+error that says so. Add `.nestbridge/` to your `.gitignore`; it's generated on
+every build and on every dev-server start.
+
+The declarations depend only on the server — its source and its bootstrap
+file — so every client of it writes the same files, and they all share one copy.
+Two servers never overwrite each other as long as their package names differ.
+Setting `outputDir` explicitly only moves the base: it is resolved from the
+bundler's own root, and the server's folder still goes under it
+(`<outputDir>/web-server/src/…`).
 
 Each declaration is written under a `<file>.lock` lock, skipped when
 its content is unchanged, and swapped in atomically, so parallel dev servers and
@@ -258,18 +271,18 @@ broken after 10 seconds; if a live lock is never released, the write fails after
 
 ```ts
 interface NestBridgeOptions {
-  name?: string;                    // names the server app; required, and unique, when you pass several apps
+  name?: string;                    // names the server app's runtime service; required, and unique, when you pass several apps; does not affect declaration paths
   controllers: string | string[];   // glob(s), resolved relative to `root`
   resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
-  messagePatterns?: boolean;        // exposes @EventPattern/@MessagePattern handlers of `controllers`; needs `name`; defaults to false
+  messagePatterns?: boolean;        // generates client methods for the @EventPattern/@MessagePattern handlers of `controllers`; needs `name`; defaults to false; declarations always include them
   baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
   bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
   logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
-  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root
-  root?: string;                    // base directory for this app's controllers, resolvers and bootstrap file; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
+  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root; either way a server's declarations go into <outputDir>/<its package name>/
+  root?: string;                    // the server package; its package.json needs a "name", which names the declarations folder; base directory for its controllers, resolvers and bootstrap file; relative paths resolve against the bundler's root (process.cwd() under webpack), which is also the default
 }
 
 interface GlobalPrefixOption {
@@ -337,8 +350,8 @@ export default defineConfig({
 {
   "compilerOptions": {
     "paths": {
-      "@identity/*": ["../../.nestbridge/identity/apps/identity/src/*"],
-      "@store/*": ["../../.nestbridge/store/apps/store/src/*"]
+      "@identity/*": ["../../.nestbridge/identity-server/src/*"],
+      "@store/*": ["../../.nestbridge/store-server/src/*"]
     }
   }
 }
@@ -353,23 +366,25 @@ Each entry is a complete, independent app:
 - **`baseURL`** is registered per service, so `identity` and `store` above talk
   to different origins. `configureNestBridge({ services })` overrides them at
   runtime — see [Setting up the runtime](#setting-up-the-runtime).
-- **`root`** should be the server app's folder: the entry's globs, its
-  bootstrap file and the mirrored declaration paths are all relative to it. A
-  relative `root` resolves against Vite's `root` (`process.cwd()` under
-  webpack).
-- **Declarations** are written under `<outputDir>/<name>/`, mirroring each
-  file's path the same way as a single app (relative to the workspace root by
-  default) — hence the `paths` entries above. A single app without a `name`
-  keeps the flat layout. The error body declaration moves with them:
-  `<outputDir>/<name>/nestbridge-error-body.d.ts`.
-- **One name, one configuration.** Builds in the same workspace that use the
-  same name for the same server share its declarations, so they must agree on
-  the options that shape them: `messagePatterns` and the bootstrap file. The
-  first build records itself in a `nestbridge-app.json` next to them; a later
-  build that configures the app differently gets an error naming the other
-  build and leaves the declarations alone. Give one of them another `name`, or
-  match the options. A build may always change its own options, and takes over
-  when the recorded build's folder no longer exists.
+- **`root`** is the server package's folder: the entry's globs, its
+  bootstrap file and the mirrored declaration paths are all relative to it, and
+  its `package.json` must have a `name`. A relative `root` resolves against
+  Vite's `root` (`process.cwd()` under webpack).
+- **Declarations** are written under `<outputDir>/<package name>/`, mirroring
+  each file's path relative to `root` — hence the `paths` entries above, where the
+  packages are named `identity-server` and `store-server`. The `name` option
+  only names the runtime service. The error body declaration lives in the same
+  folder: `error-body.d.ts`.
+- **Clients share a server's folder.** The declarations depend only on the
+  server, so any number of builds can use the same server, each with its own
+  `name`, `messagePatterns` and `baseURL`, and each rewrites the same files.
+  Two servers with the same package name would overwrite each other: give one of
+  the packages another name. Every client of a server should state the same
+  `bootstrap` (or let it be discovered the same way) — the response wrapper and
+  error body come from it, and when clients disagree, the last build wins.
+  [`examples/graphql`](examples/graphql) calls the `observable` example's
+  server as a second app, so `.nestbridge/observable-server/` is written by both
+  clients.
 - **The bootstrap file** is read per app: the one `main.ts` under its `root`,
   or the file named by `bootstrap`. So one app can register a response
   interceptor, a global prefix and URI versioning while another has none, and
@@ -565,8 +580,11 @@ to HTTP routes and GraphQL resolvers. They let one Nest app call another the
 same way a frontend calls a controller: import the other app's controller
 class, and NestBridge turns it into a client at build time. The handlers live
 on the same `@Controller()` classes, so they use the same `controllers` glob;
-`messagePatterns: true` on an app turns them on. It is off by default, so a
-browser client never receives microservice code.
+`messagePatterns: true` on an app turns them into client methods. It is off by
+default, so a browser client never receives microservice code. The generated
+declarations always describe the handlers — they depend only on the server — so
+`messagePatterns` only decides whether the client module gets the message
+methods, and whether unsupported patterns are reported.
 
 A `users` microservice, unmodified:
 
@@ -741,8 +759,8 @@ type RemoteResult<T> = T extends (...args: never[]) => infer Result
 which is exactly what a generated declaration looks like on disk:
 
 ```ts
-// .nestbridge/apps/web/server/src/users/users.controller.d.ts
-import type { UsersController as __ServerUsersController } from '../../server/src/users/users.controller';
+// .nestbridge/web-server/src/users/users.controller.d.ts
+import type { UsersController as __ServerUsersController } from '../../../../apps/web/server/src/users/users.controller';
 import type { RemoteResult } from 'nestbridge';
 
 export declare class UsersController {
@@ -904,7 +922,8 @@ options:
 
 ```ts
 nestBridge({
-  controllers: '../server/src/**/*.controller.ts',
+  root: '../server',
+  controllers: 'src/**/*.controller.ts',
   globalPrefix: { prefix: 'api', exclude: ['health'] }, // or just 'api'
   versioning: { prefix: 'v', defaultVersion: '1' },
 });
@@ -924,56 +943,93 @@ prefix, which Nest only applies to it with `useGlobalPrefix`: set
 `graphqlEndpoint` in `configureNestBridge()` when the endpoint is not
 `baseURL` + `/graphql`.
 
-## Auto-detected global response wrapper
+## Auto-detected response-shaping interceptors
 
 Both auto-detected features below read the app's bootstrap file, found as
 described in [Global prefix and URI versioning](#global-prefix-and-uri-versioning).
 
-If your app registers a global interceptor —
-
-```ts
-// main.ts
-app.useGlobalInterceptors(new ResponseInterceptor());
-```
-
-— whose `intercept()` method reshapes every response through exactly
-
-```ts
-return next.handle().pipe(map((value) => ({ data: value, meta: { requestId: '...' } })));
-```
-
-NestBridge statically detects this shape from the bootstrap file and reflects
-it in the generated client types automatically. No option, import, or config
-is involved — the client's JSON-returning methods resolve to the wrapped
-shape (with the interceptor's payload parameter substituted by
+When an interceptor reshapes a response through `map`, NestBridge reads that
+shape from your code and reflects it in the generated client types. No option,
+import, or config is involved: the client's JSON-returning methods resolve to
+the wrapped shape (with the interceptor's payload parameter substituted by
 `Awaited<Result>`) instead of the unwrapped `RemoteResult<T>`:
 
 ```ts
 findOne(...args: Parameters<__ServerUsersController['findOne']>): __NestBridgeWrapped<__ServerUsersController['findOne']>;
 ```
 
-Multiple global interceptors — registered across separate
-`useGlobalInterceptors()` calls or as multiple arguments to one call — are
-composed in registration order, matching how Nest chains them at runtime:
-the first-registered interceptor wraps the ones registered after it, so its
-shape becomes the outermost type, and the last-registered interceptor's
-shape wraps the raw handler result directly.
+### Where interceptors are read from
 
-`Observable<T>` and streamed responses are never wrapped — the interceptor
-reshaping only applies to standard JSON bodies.
+Each JSON route gets its own chain, outermost first:
 
-This is a "never guess" analysis: it only recognizes exactly the shape above,
-for every registered interceptor. Anything else — an interceptor class that
-isn't a bare `new X()` argument, a `.pipe()` chain with more than one
-operator, an operator other than `map`, a `map` not imported from `'rxjs'`,
-a callback with zero or more than one parameter, a non-object-literal return
-value, or an object literal that references its payload parameter more than
-once (or not at all) — is silently not detected, and the client falls back
-to the regular unwrapped `RemoteResult<T>`. A single unrecognized interceptor
-anywhere in the chain bails the whole detection, not just that interceptor's
-own contribution. There is no diagnostic for this: it's an app-wide concern,
-not a per-controller-method one, so a failed detection just means the types
-stay unwrapped.
+1. Global interceptors registered as `APP_INTERCEPTOR` providers
+   (`{ provide: APP_INTERCEPTOR, useClass: X }`, with `APP_INTERCEPTOR`
+   imported from `@nestjs/core`). The root module and the modules it imports
+   are read, depth-first in `imports` order, each module's providers before its
+   imports. Only plain class identifiers that resolve to a local file are
+   followed, so dynamic modules such as `Module.forRoot()` and modules from
+   packages are skipped.
+2. Global interceptors registered with `app.useGlobalInterceptors(new X())` in
+   the bootstrap file, in registration order.
+3. `@UseInterceptors(...)` (imported from `@nestjs/common`) on the controller
+   class, in argument order.
+4. `@UseInterceptors(...)` on the route method. Stacked `@UseInterceptors`
+   decorators apply bottom-up, as Nest applies them.
+
+The first interceptor in the chain is the outermost, so its shape becomes the
+outermost type and the last one wraps the raw handler result directly.
+`APP_INTERCEPTOR` providers sit outside `useGlobalInterceptors`, because Nest
+adds the providers to the global list while the application is created, before
+your `useGlobalInterceptors` call runs.
+
+`@UseInterceptors` arguments are a class identifier or `new X()`. Classes are
+resolved relative to the file that references them.
+
+### What an interceptor may contain
+
+An interceptor class is analyzed through its `intercept()` method:
+
+- Any statements may come before the final `return`, and the returned value may
+  be a local `const` holding the result.
+- The returned value is `next.handle()`, optionally piped through any number of
+  operators. `map` operators compose in order. `tap`, `timeout` and `finalize`
+  do not change the shape and contribute nothing, so an interceptor that only
+  logs or times keeps the plain `RemoteResult<T>` output. Operators must be
+  imported from `rxjs` or `rxjs/operators`.
+- A bare `return next.handle()` changes nothing.
+- A `map` callback has one parameter and a body that is a single object
+  literal, or a block holding a single `return` of one. The parameter appears
+  in that object exactly once, either as `payload` or as shorthand (`{ data }`
+  when the parameter is named `data`). Other values must have a type that can
+  be read from the code: string, number, boolean and `null` literals, nested
+  object literals, and arithmetic with `-`, `*`, `/` or `%`, which is typed
+  `number`. `+` is not typed, because it can produce a string or a number.
+
+`Observable<T>` and streamed responses are never wrapped, and message handlers
+(`@MessagePattern`, `@EventPattern`) and GraphQL resolvers are not wrapped yet,
+so an interceptor that reshapes them is not reflected in their types.
+
+### Unsupported interceptors
+
+NestBridge never guesses. Anything it cannot read is reported as an
+`unsupported-interceptor` diagnostic, once per interceptor or registration
+rather than once per route, at the interceptor's `intercept()` method (or at
+the registration when the class cannot be found). The diagnostic says what was
+found and what is expected. Examples are an operator other than `map`, `tap`,
+`timeout` and `finalize` (such as `retry` or `switchMap`), an operator that is
+not imported from `rxjs`, a `map` body that is not an object literal, a value
+whose type cannot be determined, an `intercept()` that returns before its last
+statement, an interceptor class from a package such as
+`ClassSerializerInterceptor`, a registration that is not `new X()`, and an
+`APP_INTERCEPTOR` provider that uses `useFactory`, `useValue`, `useExisting` or
+a spread (only `useClass` is supported).
+
+JSON routes whose chain contains an unsupported interceptor are declared as
+`AbortablePromise<unknown>`, so a wrong shape never type-checks silently. A
+one-shot build fails on the diagnostic; in watch mode it is logged as a warning
+and the routes stay `unknown` until the interceptor is fixed. Editing an
+interceptor file or the bootstrap file in watch mode regenerates the
+declarations.
 
 ## Auto-detected exception filter error body
 
@@ -1007,14 +1063,11 @@ class HttpExceptionFilter implements ExceptionFilter {
 ```
 
 NestBridge statically detects the shape of that response body and writes it
-to a fixed declaration file, `nestbridge-error-body.d.ts`, in the client's own
-folder under the workspace-root output directory
-(`.nestbridge/<client path from the workspace root>/`; directly in `<outputDir>` when you set
-`outputDir` or have no workspace, and in `<outputDir>/<name>/` for a named app),
-exporting a `NestBridgeErrorBody` type:
+to a fixed declaration file, `error-body.d.ts`, in the server's declaration
+folder (`.nestbridge/<server package name>/`), exporting a `NestBridgeErrorBody` type:
 
 ```ts
-// .nestbridge/apps/web/client/nestbridge-error-body.d.ts
+// .nestbridge/web-server/error-body.d.ts
 export type NestBridgeErrorBody = { statusCode: number; message: string };
 ```
 
@@ -1036,7 +1089,7 @@ guard, so a caught error narrows against the generated type:
 
 ```ts
 import { isNestBridgeError } from 'nestbridge';
-import type { NestBridgeErrorBody } from '../../../.nestbridge/apps/web/client/nestbridge-error-body';
+import type { NestBridgeErrorBody } from '../../../.nestbridge/web-server/error-body';
 
 try {
   await users.findOne('123');
@@ -1058,7 +1111,7 @@ registered via `APP_FILTER`, a `catch()` method that doesn't call
 body that isn't an object literal, or a property value that isn't one of the
 widened shapes above — is silently not detected. There is no diagnostic for
 this: it's an app-wide concern, not a per-controller-method one, so a failed
-detection just means `nestbridge-error-body.d.ts` is never written (or is
+detection just means `error-body.d.ts` is never written (or is
 removed, if the filter is removed) and `NestBridgeErrorBody` stays
 unavailable — `isNestBridgeError(error)` still narrows the error type, just
 without a type argument to narrow `error.body` further.
@@ -1113,7 +1166,8 @@ set `logLevel` in its options, with the same values as Vite's:
 
 ```ts
 nestBridge({
-  controllers: '../server/src/**/*.controller.ts',
+  root: '../server',
+  controllers: 'src/**/*.controller.ts',
   logLevel: 'error', // 'info' | 'warn' | 'error' | 'silent'
 });
 ```

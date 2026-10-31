@@ -1,18 +1,13 @@
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import {
   type ApplicationRouting,
   detectErrorResponseShape,
   detectGlobalPrefix,
-  detectResponseWrapper,
   detectVersioning,
 } from '@nestbridge/core';
 import { generateControllerModule, generateResolverModule } from '../codegen';
 import {
-  claimDeclarations,
-  DECLARATION_CLAIM_FILE_NAME,
-  type DeclarationClaim,
-  mirroredPath,
   writeControllerDeclarations,
   writeErrorBodyDeclaration,
   writeResolverDeclarations,
@@ -20,7 +15,6 @@ import {
 import { discoverFiles, resolveBootstrapFile } from '../discovery';
 import type { ResolvedNestBridgeOptions } from '../options';
 import { createControllerRegistry } from './controller-registry';
-import { describeDeclarationConflict } from './describe-declaration-conflict';
 import type { NestBridgeAppAnalysis } from './nestbridge-app-analysis';
 import type { NestBridgeAppLocation } from './nestbridge-app-location';
 import { normalizePath } from './normalize-path';
@@ -33,6 +27,7 @@ export interface NestBridgeApp {
   analyze: () => NestBridgeAppAnalysis;
   transform: (filePath: string) => string | undefined;
   ownedFiles: () => string[];
+  supportFiles: () => string[];
   isAffectedBy: (changedFile: string) => boolean;
 }
 
@@ -44,21 +39,15 @@ export const createNestBridgeApp = (
     options.root === undefined ? location.baseRoot : resolve(location.baseRoot, options.root);
   const output = resolveOutputLocation({
     outputDir: options.outputDir,
-    name: options.name,
     root,
     bundlerRoot: location.bundlerRoot,
   });
   const controllerRegistry = createControllerRegistry(options.controllers, root, {
-    messagePatterns: options.messagePatterns,
+    messagePatterns: true,
   });
   const resolverRegistry = createResolverRegistry(options.resolvers, root);
-  const claimPath = mirroredPath(
-    output.mirrorRoot,
-    output.declarationDir,
-    join(root, DECLARATION_CLAIM_FILE_NAME),
-  );
-  const caller = normalizePath(location.bundlerRoot ?? location.baseRoot);
   let bootstrapFilePath: string | undefined;
+  let interceptorFiles: ReadonlySet<string> = new Set();
 
   const describeApp = () => (options.name === undefined ? 'the app' : `app "${options.name}"`);
 
@@ -100,33 +89,23 @@ export const createNestBridgeApp = (
       globalPrefix: globalPrefix.value,
       versioning: versioning.value,
     };
-    const responseWrapper =
-      bootstrapFile === undefined ? undefined : detectResponseWrapper(bootstrapFile);
     const errorResponseShape =
       bootstrapFile === undefined ? undefined : detectErrorResponseShape(bootstrapFile);
 
-    const { controllers, diagnostics: controllerDiagnostics } = controllerRegistry.refresh(routing);
+    const {
+      controllers,
+      diagnostics: controllerDiagnostics,
+      interceptorFiles: analyzedInterceptorFiles,
+    } = controllerRegistry.refresh(routing, bootstrapFile);
+    interceptorFiles = new Set(analyzedInterceptorFiles.map(normalizePath));
     const { resolvers, diagnostics: resolverDiagnostics } = resolverRegistry.refresh();
+    const reportedControllerDiagnostics = options.messagePatterns
+      ? controllerDiagnostics
+      : controllerDiagnostics.filter(({ code }) => code !== 'unsupported-message-pattern');
 
-    const claim: DeclarationClaim = {
-      caller,
-      messagePatterns: options.messagePatterns,
-      bootstrap: bootstrapFilePath ?? null,
-    };
-    const owner = claimDeclarations(claimPath, claim);
-
-    if (owner === undefined) {
-      writeControllerDeclarations(
-        controllers,
-        output.mirrorRoot,
-        output.declarationDir,
-        responseWrapper,
-      );
-      writeResolverDeclarations(resolvers, output.mirrorRoot, output.declarationDir);
-      writeErrorBodyDeclaration(output.errorBodyDir, errorResponseShape);
-    } else {
-      problems.push(describeDeclarationConflict(options.name, output.declarationDir, owner, claim));
-    }
+    writeControllerDeclarations(controllers, root, output.declarationDir);
+    writeResolverDeclarations(resolvers, root, output.declarationDir);
+    writeErrorBodyDeclaration(output.declarationDir, errorResponseShape);
 
     return {
       controllerCount: controllers.length,
@@ -134,7 +113,7 @@ export const createNestBridgeApp = (
       diagnostics: [
         ...globalPrefix.diagnostics,
         ...versioning.diagnostics,
-        ...controllerDiagnostics,
+        ...reportedControllerDiagnostics,
         ...resolverDiagnostics,
       ],
       problems,
@@ -144,7 +123,10 @@ export const createNestBridgeApp = (
   const transform = (filePath: string) => {
     const controller = controllerRegistry.get(filePath);
     if (controller !== undefined) {
-      return generateControllerModule(controller, options.name);
+      return generateControllerModule(
+        options.messagePatterns ? controller : { ...controller, messageHandlers: [] },
+        options.name,
+      );
     }
 
     const resolver = resolverRegistry.get(filePath);
@@ -160,13 +142,19 @@ export const createNestBridgeApp = (
     ...resolverRegistry.all().map((resolver) => normalizePath(resolver.sourceFile)),
   ];
 
+  const supportFiles = () => [
+    ...(bootstrapFilePath === undefined ? [] : [bootstrapFilePath]),
+    ...interceptorFiles,
+  ];
+
   const isAffectedBy = (changedFile: string) =>
     controllerRegistry.has(changedFile) ||
     resolverRegistry.has(changedFile) ||
     changedFile === bootstrapFilePath ||
+    interceptorFiles.has(changedFile) ||
     matchesPatterns(options.controllers, changedFile) ||
     matchesPatterns(options.resolvers, changedFile) ||
     isBootstrapFile(changedFile);
 
-  return { options, analyze, transform, ownedFiles, isAffectedBy };
+  return { options, analyze, transform, ownedFiles, supportFiles, isAffectedBy };
 };

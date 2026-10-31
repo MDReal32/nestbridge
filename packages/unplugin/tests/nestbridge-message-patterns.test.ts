@@ -7,8 +7,10 @@ import { nestBridgeUnplugin } from '../src/main';
 
 const fixtureRoot = resolve(import.meta.dirname, 'fixtures/message-patterns');
 const notificationsRoot = resolve(fixtureRoot, 'notifications');
+const unsupportedRoot = resolve(fixtureRoot, 'unsupported');
 const outputDir = resolve(fixtureRoot, '.nestbridge-test-output');
 const controllerFile = resolve(notificationsRoot, 'src/emails.controller.ts').replace(/\\/g, '/');
+const declarationPath = resolve(outputDir, 'notifications-server/src/emails.controller.d.ts');
 
 const meta: UnpluginContextMeta = { framework: 'vite', versions: {} };
 
@@ -35,6 +37,14 @@ const notifications = (overrides: Partial<NestBridgeOptions>): NestBridgeOptions
   ...overrides,
 });
 
+const unsupported = (overrides: Partial<NestBridgeOptions>): NestBridgeOptions => ({
+  name: 'unsupported',
+  root: unsupportedRoot,
+  controllers: 'src/**/*.controller.ts',
+  outputDir,
+  ...overrides,
+});
+
 const transformController = (options: NestBridgeOptions) => {
   const plugin = nestBridgeUnplugin.raw(options, meta);
   plugin.buildStart?.call(buildContext);
@@ -42,6 +52,9 @@ const transformController = (options: NestBridgeOptions) => {
   const handler = typeof hook === 'function' ? hook : hook?.handler;
   return String(handler?.call(hookContext, '', controllerFile));
 };
+
+const buildOnce = (options: NestBridgeOptions) =>
+  nestBridgeUnplugin.raw(options, { ...meta, watchMode: false });
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -61,10 +74,7 @@ describe('nestBridgeUnplugin with messagePatterns', () => {
   it('declares the message methods next to the HTTP routes', () => {
     transformController(notifications({ messagePatterns: true }));
 
-    const declaration = readFileSync(
-      resolve(outputDir, 'notifications/src/emails.controller.d.ts'),
-      'utf-8',
-    );
+    const declaration = readFileSync(declarationPath, 'utf-8');
 
     expect(declaration).toContain('find(...args:');
     expect(declaration).toContain(
@@ -75,38 +85,59 @@ describe('nestBridgeUnplugin with messagePatterns', () => {
     );
   });
 
-  it('fails a second build that names the same app but configures it differently', () => {
-    const declarationPath = resolve(outputDir, 'notifications/src/emails.controller.d.ts');
+  it('shares the declarations with a second build that sets messagePatterns differently', () => {
     const cwd = vi.spyOn(process, 'cwd').mockReturnValue(fixtureRoot);
     transformController(notifications({ messagePatterns: true }));
     cwd.mockReturnValue(notificationsRoot);
 
-    const otherBuild = nestBridgeUnplugin.raw(notifications({}), { ...meta, watchMode: false });
+    const otherBuild = buildOnce(notifications({}));
 
-    expect(() => otherBuild.buildStart?.call(buildContext)).toThrow(
-      /App "notifications" shares its declarations in .+ with the build of .+, which configures it differently \(messagePatterns true there, false here\)\. .+give this app another `name`/,
-    );
+    expect(() => otherBuild.buildStart?.call(buildContext)).not.toThrow();
     expect(readFileSync(declarationPath, 'utf-8')).toContain('handleEmailRequested(payload:');
   });
 
-  it('shares the declarations with a second build that configures the app the same way', () => {
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(fixtureRoot);
-    transformController(notifications({ messagePatterns: true }));
-    cwd.mockReturnValue(notificationsRoot);
-
-    const otherBuild = nestBridgeUnplugin.raw(notifications({ messagePatterns: true }), {
-      ...meta,
-      watchMode: false,
-    });
-
-    expect(() => otherBuild.buildStart?.call(buildContext)).not.toThrow();
-  });
-
-  it('leaves message handlers out when messagePatterns is off', () => {
+  it('leaves message handlers out of the client code when messagePatterns is off', () => {
     const code = transformController(notifications({}));
 
     expect(code).not.toContain('nestbridge/microservices');
     expect(code).not.toContain('handleEmailRequested');
-    expect(existsSync(resolve(outputDir, 'notifications/src/emails.controller.d.ts'))).toBe(true);
+    expect(code).toContain('find(');
+  });
+
+  it('declares the message methods even when messagePatterns is off', () => {
+    transformController(notifications({}));
+
+    const declaration = readFileSync(declarationPath, 'utf-8');
+
+    expect(declaration).toContain('handleEmailRequested(payload:');
+    expect(declaration).toContain('count(): Promise<NestBridgeMessageResult');
+  });
+
+  it('writes the same declarations whatever messagePatterns is', () => {
+    transformController(notifications({ messagePatterns: true }));
+    const withMessagePatterns = readFileSync(declarationPath, 'utf-8');
+    rmSync(outputDir, { recursive: true, force: true });
+
+    transformController(notifications({}));
+
+    expect(existsSync(declarationPath)).toBe(true);
+    expect(readFileSync(declarationPath, 'utf-8')).toBe(withMessagePatterns);
+  });
+});
+
+describe('nestBridgeUnplugin message pattern diagnostics', () => {
+  it('fails a one-shot build on an unsupported message pattern when messagePatterns is on', () => {
+    const plugin = buildOnce(unsupported({ messagePatterns: true }));
+
+    expect(() => plugin.buildStart?.call(buildContext)).toThrow(/Unsupported message pattern/);
+  });
+
+  it('filters unsupported message pattern diagnostics out when messagePatterns is off', () => {
+    const plugin = buildOnce(unsupported({}));
+
+    expect(() => plugin.buildStart?.call(buildContext)).not.toThrow();
+    expect(existsSync(resolve(outputDir, 'unsupported-server/src/audit.controller.d.ts'))).toBe(
+      true,
+    );
   });
 });

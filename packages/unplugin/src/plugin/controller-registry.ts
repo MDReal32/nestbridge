@@ -12,10 +12,14 @@ import { normalizePath } from './normalize-path';
 export interface ControllerRegistryRefreshResult {
   controllers: ControllerDefinition[];
   diagnostics: NestBridgeDiagnostic[];
+  interceptorFiles: string[];
 }
 
 export interface ControllerRegistry {
-  refresh: (routing?: ApplicationRouting) => ControllerRegistryRefreshResult;
+  refresh: (
+    routing?: ApplicationRouting,
+    bootstrapFilePath?: string,
+  ) => ControllerRegistryRefreshResult;
   get: (filePath: string) => ControllerDefinition | undefined;
   has: (filePath: string) => boolean;
   all: () => ControllerDefinition[];
@@ -28,18 +32,22 @@ export const createControllerRegistry = (
 ): ControllerRegistry => {
   const controllersByFile = new Map<string, ControllerDefinition>();
 
-  const refresh = (routing: ApplicationRouting = {}) => {
+  const refresh = (routing: ApplicationRouting = {}, bootstrapFilePath?: string) => {
     controllersByFile.clear();
 
     const files = discoverFiles(patterns, root);
-    const { controllers: analyzed, diagnostics } = analyzeControllers(files, analysisOptions);
+    const {
+      controllers: analyzed,
+      diagnostics,
+      interceptorFiles,
+    } = analyzeControllers(files, { ...analysisOptions, bootstrapFilePath });
     const controllers = applyApplicationRouting(analyzed, routing);
 
     for (const controller of controllers) {
       controllersByFile.set(normalizePath(controller.sourceFile), controller);
     }
 
-    return { controllers, diagnostics };
+    return { controllers, diagnostics, interceptorFiles };
   };
 
   return {

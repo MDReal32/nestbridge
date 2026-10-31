@@ -13,10 +13,10 @@ afterEach(() => {
 });
 
 describe('errorBodyDeclarationPath', () => {
-  it('points at a fixed nestbridge-error-body.d.ts under the output directory', () => {
+  it('points at a fixed error-body.d.ts under the output directory', () => {
     const outputFilePath = errorBodyDeclarationPath(resolvedOutputDir);
 
-    expect(outputFilePath).toBe(resolve(resolvedOutputDir, 'nestbridge-error-body.d.ts'));
+    expect(outputFilePath).toBe(resolve(resolvedOutputDir, 'error-body.d.ts'));
   });
 });
 

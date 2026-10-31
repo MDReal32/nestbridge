@@ -4,9 +4,12 @@ import type {
   ControllerAnalysisResult,
   ControllerDefinition,
 } from '../models';
+import { attachResponseWrappers } from './attach-response-wrappers';
+import { createInterceptorAnalysis } from './create-interceptor-analysis';
 import { extractControllerDefinition } from './extract-controller-definition';
 import { findControllerClasses } from './find-controller-classes';
 import { openSourceFile } from './open-source-file';
+import { clearParsedFileCache } from './resolve-type-declaration';
 
 export const analyzeControllers = (
   filePaths: readonly string[],
@@ -14,24 +17,39 @@ export const analyzeControllers = (
 ): ControllerAnalysisResult => {
   const diagnostics: NestBridgeDiagnostic[] = [];
   const controllers: ControllerDefinition[] = [];
+  const interceptors = createInterceptorAnalysis({
+    bootstrapFilePath: options.bootstrapFilePath,
+    diagnostics,
+  });
+
+  clearParsedFileCache();
 
   for (const filePath of filePaths) {
     const { sourceFile, checker } = openSourceFile(filePath);
 
-    for (const classDeclaration of findControllerClasses(sourceFile)) {
-      const controller = extractControllerDefinition(classDeclaration, {
+    const extractedControllers = findControllerClasses(sourceFile).map((classDeclaration) => ({
+      classDeclaration,
+      controller: extractControllerDefinition(classDeclaration, {
         sourceFile,
         filePath,
         checker,
         messagePatterns: options.messagePatterns ?? false,
         diagnostics,
-      });
+      }),
+    }));
 
+    for (const { classDeclaration, controller } of extractedControllers) {
       if (controller !== undefined) {
-        controllers.push(controller);
+        controllers.push(
+          attachResponseWrappers(
+            controller,
+            classDeclaration,
+            interceptors.forController(classDeclaration, sourceFile, filePath),
+          ),
+        );
       }
     }
   }
 
-  return { controllers, diagnostics };
+  return { controllers, diagnostics, interceptorFiles: interceptors.contributingFiles() };
 };

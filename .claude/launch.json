@@ -72,6 +72,18 @@
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["workspace", "error-handling-client", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "interceptors-server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "interceptors-server", "run", "dev"],
+      "port": 3500
+    },
+    {
+      "name": "interceptors-client",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "interceptors-client", "run", "dev"],
+      "port": 5173
     }
   ]
 }

@@ -100,22 +100,22 @@ describe('nestBridgeUnplugin with several apps', () => {
     expect(code).toContain('setNestBridgeServiceBaseURL("store", "https://store.example.com");');
   });
 
-  it('writes declarations under a folder per app', () => {
+  it('writes declarations under a folder per server package', () => {
     startPlugin([identity, store]);
 
-    expect(existsSync(resolve(outputDir, 'identity/src/users.controller.d.ts'))).toBe(true);
-    expect(existsSync(resolve(outputDir, 'store/src/products.controller.d.ts'))).toBe(true);
+    expect(existsSync(resolve(outputDir, 'identity-server/src/users.controller.d.ts'))).toBe(true);
+    expect(existsSync(resolve(outputDir, 'store-server/src/products.controller.d.ts'))).toBe(true);
   });
 
   it('detects the response wrapper of each bootstrap file independently', () => {
     startPlugin([identity, store]);
 
     const identityDeclaration = readFileSync(
-      resolve(outputDir, 'identity/src/users.controller.d.ts'),
+      resolve(outputDir, 'identity-server/src/users.controller.d.ts'),
       'utf-8',
     );
     const storeDeclaration = readFileSync(
-      resolve(outputDir, 'store/src/products.controller.d.ts'),
+      resolve(outputDir, 'store-server/src/products.controller.d.ts'),
       'utf-8',
     );
 
@@ -154,7 +154,7 @@ describe('nestBridgeUnplugin with several apps', () => {
     const users = transformOf(plugin, resolve(identityRoot, 'src/users.controller.ts'));
 
     expect(users).not.toContain('service:');
-    expect(existsSync(resolve(outputDir, 'src/users.controller.d.ts'))).toBe(true);
+    expect(existsSync(resolve(outputDir, 'identity-server/src/users.controller.d.ts'))).toBe(true);
   });
 
   it('fails the build when two apps match the same controller file', () => {

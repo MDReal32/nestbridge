@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { type ErrorResponseShapeDetection, generateErrorBodyDeclaration } from '@nestbridge/core';
 import { writeFileLocked } from './write-file-locked';
 
-export const ERROR_BODY_DECLARATION_FILE_NAME = 'nestbridge-error-body.d.ts';
+export const ERROR_BODY_DECLARATION_FILE_NAME = 'error-body.d.ts';
 
 export const errorBodyDeclarationPath = (resolvedOutputDir: string) =>
   join(resolvedOutputDir, ERROR_BODY_DECLARATION_FILE_NAME);

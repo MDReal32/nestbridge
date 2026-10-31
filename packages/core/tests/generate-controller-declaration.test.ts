@@ -2,13 +2,13 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { analyzeControllers } from '../src/analysis';
 import { generateControllerDeclaration } from '../src/declarations';
-import type { ResponseWrapperDetection } from '../src/models';
 
 const fixture = (name: string) => resolve(import.meta.dirname, 'fixtures', name);
 
-const responseWrapper: ResponseWrapperDetection = {
-  wrappedResultTypeSource: '{ data: Awaited<Result>; meta: { requestId: string } }',
-};
+const analyzeWrapped = (name: string) =>
+  analyzeControllers([fixture(name)], {
+    bootstrapFilePath: fixture('wrapped-response.bootstrap.ts'),
+  });
 
 describe('generateControllerDeclaration', () => {
   it('emits a declare class with a zero-argument constructor', () => {
@@ -155,11 +155,10 @@ describe('generateControllerDeclaration', () => {
   });
 
   it('projects JSON-returning methods through the local wrapped-result helper when a response wrapper is detected', () => {
-    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const { controllers } = analyzeWrapped('streaming.controller.ts');
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/streaming.controller.d.ts'),
-      responseWrapper,
     );
 
     expect(declaration).toContain(
@@ -168,11 +167,10 @@ describe('generateControllerDeclaration', () => {
   });
 
   it('emits a local __NestBridgeWrapped type alias built from the detected wrapper shape', () => {
-    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const { controllers } = analyzeWrapped('streaming.controller.ts');
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/streaming.controller.d.ts'),
-      responseWrapper,
     );
 
     expect(declaration).toContain(
@@ -181,11 +179,10 @@ describe('generateControllerDeclaration', () => {
   });
 
   it('leaves Observable- and StreamableFile-returning methods unwrapped even when a response wrapper is detected', () => {
-    const { controllers } = analyzeControllers([fixture('streaming.controller.ts')]);
+    const { controllers } = analyzeWrapped('streaming.controller.ts');
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/streaming.controller.d.ts'),
-      responseWrapper,
     );
 
     expect(declaration).toContain(
@@ -203,11 +200,10 @@ describe('generateControllerDeclaration', () => {
   });
 
   it('imports only AbortablePromise when every method resolves to the wrapped-result helper', () => {
-    const { controllers } = analyzeControllers([fixture('widgets.controller.ts')]);
+    const { controllers } = analyzeWrapped('widgets.controller.ts');
     const declaration = generateControllerDeclaration(
       controllers[0]!,
       fixture('generated/widgets.controller.d.ts'),
-      responseWrapper,
     );
 
     expect(declaration).toContain("import type { AbortablePromise } from 'nestbridge';");
@@ -258,5 +254,59 @@ describe('generateControllerDeclaration', () => {
     expect(declaration).toContain(
       "  record(payload: Parameters<__ServerAuditController['record']>[0]): Promise<void>;",
     );
+  });
+
+  it('emits one wrapped-result alias per distinct wrapper and points each method at its own', () => {
+    const { controllers } = analyzeControllers(
+      [fixture('interceptors/use-interceptors/layered.controller.ts')],
+      { bootstrapFilePath: fixture('interceptors/use-interceptors/main.ts') },
+    );
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/layered.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      'type __NestBridgeWrapped<T> = T extends (...args: never[]) => infer Result ? AbortablePromise<{ global: { classOne: { classTwo: Awaited<Result> } } }> : never;',
+    );
+    expect(declaration).toContain(
+      'type __NestBridgeWrapped2<T> = T extends (...args: never[]) => infer Result ? AbortablePromise<{ global: { classOne: { classTwo: { method: Awaited<Result> } } } }> : never;',
+    );
+    expect(declaration).toContain(
+      "list(...args: Parameters<__ServerLayeredController['list']>): __NestBridgeWrapped<__ServerLayeredController['list']>;",
+    );
+    expect(declaration).toContain(
+      "findOne(...args: Parameters<__ServerLayeredController['findOne']>): __NestBridgeWrapped2<__ServerLayeredController['findOne']>;",
+    );
+  });
+
+  it('declares routes under an unsupported interceptor as AbortablePromise<unknown> and leaves the rest wrapped', () => {
+    const { controllers } = analyzeControllers(
+      [fixture('interceptors/use-interceptors/unsupported-argument.controller.ts')],
+      { bootstrapFilePath: fixture('interceptors/use-interceptors/main.ts') },
+    );
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/unsupported-argument.controller.d.ts'),
+    );
+
+    expect(declaration).toContain(
+      "list(...args: Parameters<__ServerUnsupportedArgumentController['list']>): AbortablePromise<unknown>;",
+    );
+    expect(declaration).toContain(
+      "findOne(...args: Parameters<__ServerUnsupportedArgumentController['findOne']>): __NestBridgeWrapped<__ServerUnsupportedArgumentController['findOne']>;",
+    );
+    expect(declaration).not.toContain('RemoteResult');
+  });
+
+  it('emits no wrapped-result alias when every method is unwrapped', () => {
+    const { controllers } = analyzeControllers([fixture('interceptors/plain.controller.ts')]);
+    const declaration = generateControllerDeclaration(
+      controllers[0]!,
+      fixture('generated/plain.controller.d.ts'),
+    );
+
+    expect(declaration).not.toContain('__NestBridgeWrapped');
+    expect(declaration).not.toContain('AbortablePromise');
   });
 });

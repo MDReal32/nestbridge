@@ -46,6 +46,19 @@ statically read `pattern`, and `payloadParameterIndex`. A pattern that is not
 statically known gives an `unsupported-message-pattern` diagnostic. Without
 the option, `messageHandlers` is empty.
 
+With `analyzeControllers(filePaths, { bootstrapFilePath })`, each JSON method
+also carries an optional `responseWrapper`: the response shape given by the
+interceptors that apply to it (global `APP_INTERCEPTOR` providers, then
+`useGlobalInterceptors(...)` in the bootstrap file, then the controller's and
+the method's `@UseInterceptors`, outermost first). A method no interceptor
+reshapes has no `responseWrapper`. An interceptor that cannot be read gives an
+`unsupported-interceptor` diagnostic, once per interceptor, and its methods get
+a `responseWrapper` of `unknown`. `interceptorFiles` lists the files that took
+part in that detection, so a watcher knows what to re-analyze. Message handlers
+and GraphQL resolvers are not wrapped yet. See the [repository
+README](../../README.md#auto-detected-response-shaping-interceptors) for the
+full rules.
+
 ```ts
 import { analyzeControllers } from '@nestbridge/core';
 
@@ -74,7 +87,7 @@ const { resolvers, diagnostics } = analyzeResolvers([
 ]);
 ```
 
-### `generateControllerDeclaration(definition, outputFilePath, responseWrapper?)`
+### `generateControllerDeclaration(definition, outputFilePath)`
 
 Turns a `ControllerDefinition` or a `ResolverDefinition` into the text of a
 `.d.ts` file — both share the same `{ name, sourceFile, methods }` shape, so
@@ -83,32 +96,15 @@ method using a type-only reference back to the real controller or resolver
 (`Parameters<__ServerX['method']>` / `RemoteResult<...>`, or
 `RemoteObservableResult<...>` / `RemoteStreamResult<...>` for observable and
 streamed methods), so argument and return types are projected from the real
-class's own type — never re-derived from the AST. Pass the result of
-`detectResponseWrapper` as `responseWrapper` to wrap the JSON-returning
-methods in the detected response shape (an `AbortablePromise` of it). The helper
-types are imported from `'nestbridge'`.
+class's own type — never re-derived from the AST. A method with a
+`responseWrapper` (see `analyzeControllers`) is declared as an
+`AbortablePromise` of its own wrapped shape instead; methods without one are
+unchanged. The helper types are imported from `'nestbridge'`.
 
 ```ts
 import { generateControllerDeclaration } from '@nestbridge/core';
 
 const source = generateControllerDeclaration(controller, outputPath);
-```
-
-### `detectResponseWrapper(bootstrapFilePath)`
-
-Statically detects `app.useGlobalInterceptors(...)` registrations in the
-bootstrap file whose `intercept()` method reshapes every response through a
-single recognized `next.handle().pipe(map(...))` call, composing multiple
-chained interceptors in registration order, and returns the resulting
-wrapped-response type source. Returns `undefined` when no interceptor is
-registered, or the shape isn't exactly recognized — see the [repository
-README](../../README.md#auto-detected-global-response-wrapper) for the full
-rules.
-
-```ts
-import { detectResponseWrapper } from '@nestbridge/core';
-
-const responseWrapper = detectResponseWrapper('src/main.ts');
 ```
 
 ### `detectErrorResponseShape(bootstrapFilePath)`
@@ -184,7 +180,7 @@ const routed = applyApplicationRouting(controllers, {
 ### `generateErrorBodyDeclaration(errorBodyTypeSource)`
 
 Turns the `errorBodyTypeSource` from `detectErrorResponseShape` into the text
-of the fixed `nestbridge-error-body.d.ts` declaration file, exporting a
+of the fixed `error-body.d.ts` declaration file, exporting a
 `NestBridgeErrorBody` type.
 
 ```ts

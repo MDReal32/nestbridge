@@ -1,6 +1,7 @@
 import type { ControllerParameterDefinition } from './controller-parameter-definition';
 import type { HttpMethod } from './http-method';
 import type { ResponseKind } from './response-kind';
+import type { ResponseWrapperDetection } from './response-wrapper-detection';
 
 export interface ControllerMethodDefinition {
   name: string;
@@ -18,6 +19,11 @@ export interface ControllerMethodDefinition {
    */
   serverOnlyParameterIndexes: number[];
   responseKind: ResponseKind;
+  /**
+   * The shape the interceptors applying to this JSON route give its response. Absent when none of
+   * them changes the shape.
+   */
+  responseWrapper?: ResponseWrapperDetection;
   line: number;
   column: number;
 }

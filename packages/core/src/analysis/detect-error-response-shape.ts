@@ -11,7 +11,11 @@ import { findGlobalFilterClassName } from './find-global-filter-class-name';
 import { findRootModuleClassName } from './find-root-module-class-name';
 import { parseSourceFile } from './parse-source-file';
 import { resolveCatchMethodBody } from './resolve-catch-method-body';
-import { type ResolvedTypeDeclaration, resolveClassDeclaration } from './resolve-type-declaration';
+import {
+  clearParsedFileCache,
+  type ResolvedTypeDeclaration,
+  resolveClassDeclaration,
+} from './resolve-type-declaration';
 import { synthesizeErrorBodyType } from './synthesize-error-body-type';
 
 const CATCH_DECORATOR_NAME = 'Catch';
@@ -80,6 +84,7 @@ const reconcileResolvedFilter = (
 export const detectErrorResponseShape = (
   bootstrapFilePath: string,
 ): ErrorResponseShapeDetection | undefined => {
+  clearParsedFileCache();
   const bootstrapSourceFile = parseSourceFile(bootstrapFilePath);
 
   const resolved = reconcileResolvedFilter(

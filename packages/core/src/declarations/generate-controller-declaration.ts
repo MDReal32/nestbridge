@@ -2,6 +2,7 @@ import { dirname, extname, relative } from 'node:path';
 import type { MessageHandlerDefinition } from '../models/message-handler-definition';
 import type { ResponseKind } from '../models/response-kind';
 import type { ResponseWrapperDetection } from '../models/response-wrapper-detection';
+import { WRAPPED_RESULT_SUBSTITUTION } from '../models/response-wrapper-substitution';
 
 interface ClientDeclarationParameter {
   index: number;
@@ -11,6 +12,7 @@ interface ClientDeclarationParameter {
 interface ClientDeclarationMethod {
   name: string;
   responseKind?: ResponseKind;
+  responseWrapper?: ResponseWrapperDetection;
   parameters?: readonly ClientDeclarationParameter[];
   serverOnlyParameterIndexes?: readonly number[];
 }
@@ -61,19 +63,64 @@ const stripExtension = (filePath: string) => {
   return extension.length > 0 ? filePath.slice(0, -extension.length) : filePath;
 };
 
+const dependsOnServerResult = (wrapper: ResponseWrapperDetection) =>
+  wrapper.wrappedResultTypeSource.includes(WRAPPED_RESULT_SUBSTITUTION);
+
+const wrapperOf = (method: ClientDeclarationMethod) =>
+  (method.responseKind ?? 'json') === 'json' ? method.responseWrapper : undefined;
+
+/**
+ * Wrappers that depend on the server result get a generic alias, in order of first use, so the
+ * first one keeps the name `__NestBridgeWrapped`. A wrapper that does not depend on it, such as
+ * `unknown`, is written inline.
+ */
+const aliasedWrapperSourcesOf = (methods: readonly ClientDeclarationMethod[]) => {
+  const sources = new Set<string>();
+
+  for (const method of methods) {
+    const wrapper = wrapperOf(method);
+
+    if (wrapper !== undefined && dependsOnServerResult(wrapper)) {
+      sources.add(wrapper.wrappedResultTypeSource);
+    }
+  }
+
+  return [...sources];
+};
+
+const wrapperHelperName = (aliasIndex: number) =>
+  aliasIndex === 0 ? WRAPPED_RESULT_HELPER : `${WRAPPED_RESULT_HELPER}${aliasIndex + 1}`;
+
 export const generateControllerDeclaration = (
   controller: ClientDeclarationSource,
   outputFilePath: string,
-  responseWrapper?: ResponseWrapperDetection,
 ): string => {
   const sourceFileSpecifier = importSpecifierFor(controller.sourceFile, outputFilePath);
   const importSpecifier = stripExtension(sourceFileSpecifier);
   const serverAlias = `__Server${controller.name}`;
 
-  const helperNameFor = (method: ClientDeclarationMethod) =>
-    responseWrapper !== undefined && (method.responseKind ?? 'json') === 'json'
-      ? WRAPPED_RESULT_HELPER
-      : REMOTE_RESULT_HELPERS[method.responseKind ?? 'json'];
+  const aliasedWrapperSources = aliasedWrapperSourcesOf(controller.methods);
+
+  const resultTypeFor = (method: ClientDeclarationMethod) => {
+    const serverMethod = `${serverAlias}['${method.name}']`;
+    const wrapper = wrapperOf(method);
+
+    if (wrapper === undefined) {
+      return `${REMOTE_RESULT_HELPERS[method.responseKind ?? 'json']}<${serverMethod}>`;
+    }
+
+    if (!dependsOnServerResult(wrapper)) {
+      return `${ABORTABLE_PROMISE}<${wrapper.wrappedResultTypeSource}>`;
+    }
+
+    const aliasIndex = aliasedWrapperSources.indexOf(wrapper.wrappedResultTypeSource);
+    return `${wrapperHelperName(aliasIndex)}<${serverMethod}>`;
+  };
+
+  const importedHelperFor = (method: ClientDeclarationMethod) =>
+    wrapperOf(method) === undefined
+      ? REMOTE_RESULT_HELPERS[method.responseKind ?? 'json']
+      : ABORTABLE_PROMISE;
 
   const parameterListFor = (method: ClientDeclarationMethod) => {
     const serverParameters = `Parameters<${serverAlias}['${method.name}']>`;
@@ -88,10 +135,9 @@ export const generateControllerDeclaration = (
       .join(', ');
   };
 
-  const methodDeclarations = controller.methods.map((method) => {
-    const helperName = helperNameFor(method);
-    return `  ${method.name}(${parameterListFor(method)}): ${helperName}<${serverAlias}['${method.name}']>;`;
-  });
+  const methodDeclarations = controller.methods.map(
+    (method) => `  ${method.name}(${parameterListFor(method)}): ${resultTypeFor(method)};`,
+  );
 
   const messageHandlers = controller.messageHandlers ?? [];
 
@@ -114,12 +160,8 @@ export const generateControllerDeclaration = (
     ...messageHandlerDeclarations,
   ].join('\n');
 
-  const rawHelperNames = controller.methods.map((method) => helperNameFor(method));
-  const hasWrappedMethod = rawHelperNames.includes(WRAPPED_RESULT_HELPER);
   const remoteHelperImports = Array.from(
-    new Set(
-      rawHelperNames.map((name) => (name === WRAPPED_RESULT_HELPER ? ABORTABLE_PROMISE : name)),
-    ),
+    new Set(controller.methods.map((method) => importedHelperFor(method))),
   ).sort();
   const helperImports =
     remoteHelperImports.length === 0 && messageHandlers.length === 0
@@ -128,12 +170,15 @@ export const generateControllerDeclaration = (
   const usesMessageResult = messageHandlers.some((handler) => handler.kind === 'message');
 
   const wrappedResultTypeAliasLines =
-    responseWrapper !== undefined && hasWrappedMethod
-      ? [
-          `type ${WRAPPED_RESULT_HELPER}<T> = T extends (...args: never[]) => infer Result ? ${ABORTABLE_PROMISE}<${responseWrapper.wrappedResultTypeSource}> : never;`,
+    aliasedWrapperSources.length === 0
+      ? []
+      : [
+          ...aliasedWrapperSources.map(
+            (source, aliasIndex) =>
+              `type ${wrapperHelperName(aliasIndex)}<T> = T extends (...args: never[]) => infer Result ? ${ABORTABLE_PROMISE}<${source}> : never;`,
+          ),
           '',
-        ]
-      : [];
+        ];
 
   return [
     `import type { ${controller.name} as ${serverAlias} } from '${importSpecifier}';`,

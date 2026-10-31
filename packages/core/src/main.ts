@@ -4,7 +4,6 @@ export {
   applyApplicationRouting,
   detectErrorResponseShape,
   detectGlobalPrefix,
-  detectResponseWrapper,
   detectVersioning,
 } from './analysis';
 export { generateControllerDeclaration, generateErrorBodyDeclaration } from './declarations';

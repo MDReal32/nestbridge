@@ -10,8 +10,9 @@ export default defineConfig({
   },
   plugins: [
     nestBridge({
-      controllers: '../server/src/**/*.controller.ts',
-      resolvers: '../server/src/**/*.resolver.ts',
+      root: resolve(import.meta.dirname, '../server'),
+      controllers: 'src/**/*.controller.ts',
+      resolvers: 'src/**/*.resolver.ts',
       baseURL: 'http://localhost:3500',
     }),
   ],

@@ -1,3 +1,64 @@
+# Migrating to 3.0
+
+3.0 gives every server one declaration folder, named after its package, with the same layout whatever the options.
+Declarations now depend only on the server, so every client of a server shares one folder. The layout change is
+breaking: update your `root`, tsconfig `paths` and error body imports as below.
+
+## Upgrade
+
+1. **Point `root` at the server package, and give that package a `name`.** The folder is named after the `name` in
+   `<root>/package.json`. Without a `package.json`, or without a `name` in it, the build fails with an error that
+   says so. A relative `root` still resolves against the bundler's root, and the globs, the bootstrap file and the
+   mirrored declaration paths are all relative to it:
+
+   ```diff
+     nestBridge({
+   -   controllers: '../server/src/**/*.controller.ts',
+   +   root: '../server',
+   +   controllers: 'src/**/*.controller.ts',
+     });
+   ```
+
+   This also stops the client's own `main.ts` from being picked up as the server's bootstrap file when the old
+   `root` was the client (or a parent folder of both).
+
+2. **Update tsconfig `paths`.** Declarations are written to `<outputDir>/<server package name>/` and keep the `src/`
+   segment, because paths are mirrored relative to `root`:
+
+   ```diff
+   - "@server/*": ["../../../.nestbridge/examples/http/server/src/*"]
+   + "@server/*": ["../../../.nestbridge/http-server/src/*"]
+   ```
+
+   A scoped package nests: `@acme/api` is `.nestbridge/@acme/api/src/*`. The same holds for a named app (it used
+   to be `.nestbridge/<name>/<path from the workspace root>/…`), with an explicit `outputDir`, and when there is no
+   workspace: only the base folder changes.
+
+3. **Update the error body import.** The error body type is no longer written next to the client, but into the
+   server's folder, as `error-body.d.ts` (it was `nestbridge-error-body.d.ts`):
+
+   ```diff
+   - import type { NestBridgeErrorBody } from '../../../.nestbridge/apps/web/client/nestbridge-error-body';
+   + import type { NestBridgeErrorBody } from '../../../.nestbridge/web-server/error-body';
+   ```
+
+4. **Delete the old folders.** Remove the previous `.nestbridge/` output so stale declarations do not linger.
+
+## What changed in behaviour
+
+- **`name` no longer affects any path.** It only names the runtime service (`service` on every request, the origin
+  and the message client are looked up by it). Declarations are named after the package at `root`.
+- **Message handlers are always declared.** `@EventPattern` / `@MessagePattern` methods are written to the
+  declarations whatever `messagePatterns` is, so a client with it off and one with it on read the same files. The
+  option now only decides whether the generated client module has the message methods, and whether
+  `unsupported-message-pattern` diagnostics are reported. A client with `messagePatterns` off that calls a message
+  method type-checks but has nothing behind it: turn the option on (it needs a `name`) when you use them.
+- **Builds share a server's folder, with no owner.** The declarations depend only on the server (its source and its
+  bootstrap file), so every client that builds a server writes the same files, whatever its `messagePatterns`, `name`
+  or `baseURL`. Nothing records which build wrote them. Two different servers must have different package names, or they
+  overwrite each other. Every client of a server should use the same `bootstrap` option (or discover the same file):
+  when they disagree, the last build wins.
+
 # Migrating from nestrelay
 
 2.6 adds `@EventPattern` / `@MessagePattern` handlers as a third NestBridge transport, replacing the
@@ -32,8 +93,8 @@ Import the provider's real controller through your alias instead of the virtual 
 + import { EmailsController } from '@notifications/emails/emails.controller';
 ```
 
-Point the alias's tsconfig `paths` entry at the generated declarations under `.nestbridge/<name>/…`, like any other
-NestBridge app, and remove the `@nestrelay/*` entry and the `.nestrelay/` folder.
+Point the alias's tsconfig `paths` entry at the generated declarations under `.nestbridge/<server package name>/src/*`
+(see [Migrating to 3.0](#migrating-to-30)), like any other NestBridge app, and remove the `@nestrelay/*` entry and the `.nestrelay/` folder.
 
 ## Runtime
 
@@ -207,7 +268,8 @@ its own origin, bootstrap file, response wrapper, error body, prefix and version
 Things to adjust when you adopt it:
 
 - **Declarations move into a folder per app.** A named app writes to `<outputDir>/<name>/…`
-  (`.nestbridge/identity/src/…`), so each app needs its own alias and `paths` entry:
+  (`.nestbridge/identity/src/…`) — in 3.0 the folder is named after the server package instead, see
+  [Migrating to 3.0](#migrating-to-30) — so each app needs its own alias and `paths` entry:
 
   ```json
   {
