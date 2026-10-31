@@ -1,4 +1,9 @@
-import { createUnplugin, type UnpluginInstance, type UnpluginOptions } from 'unplugin';
+import {
+  createUnplugin,
+  type UnpluginBuildContext,
+  type UnpluginInstance,
+  type UnpluginOptions,
+} from 'unplugin';
 import { generateConfigModule } from '../codegen';
 import { type NestBridgePluginOptions, resolveNestBridgeOptions } from '../options';
 import { CONFIG_VIRTUAL_MODULE_ID, RESOLVED_CONFIG_VIRTUAL_MODULE_ID } from '../virtual-modules';
@@ -35,11 +40,18 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
     }
   };
 
-  const analyzeApps = (targets: readonly NestBridgeApp[]) => {
+  const analyzeApps = (
+    targets: readonly NestBridgeApp[],
+    context: Pick<UnpluginBuildContext, 'addWatchFile'>,
+  ) => {
     const watchMode = isWatchMode();
 
     for (const app of targets) {
       const { controllerCount, resolverCount, diagnostics, problems } = app.analyze();
+
+      for (const supportFile of app.supportFiles()) {
+        context.addWatchFile(supportFile);
+      }
 
       reportMessages(
         problems.map((problem) => `[nestbridge] ${problem}`),
@@ -70,7 +82,7 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
 
     buildStart() {
       apps = entries.map((entry) => createNestBridgeApp(entry, { baseRoot, bundlerRoot }));
-      analyzeApps(apps);
+      analyzeApps(apps, this);
     },
 
     resolveId(source) {
@@ -111,7 +123,7 @@ export const nestBridgeUnplugin: UnpluginInstance<NestBridgePluginOptions, false
         return;
       }
 
-      analyzeApps(affectedApps);
+      analyzeApps(affectedApps, this);
 
       for (const app of affectedApps) {
         log(app, `nestbridge source changed: ${changedFile}`);

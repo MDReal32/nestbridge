@@ -6,6 +6,7 @@ import { nestBridge } from '../src/main';
 
 const fixturesRoot = resolve(import.meta.dirname, 'fixtures');
 const clientRoot = resolve(fixturesRoot, 'client');
+const serverRoot = resolve(fixturesRoot, 'server');
 const outputRoot = resolve(clientRoot, 'dist');
 
 const runBuild = async () => {
@@ -38,9 +39,9 @@ const runBuild = async () => {
     },
     plugins: [
       nestBridge({
-        root: clientRoot,
-        controllers: '../server/**/*.controller.ts',
-        resolvers: '../server/**/*.resolver.ts',
+        root: serverRoot,
+        controllers: '**/*.controller.ts',
+        resolvers: '**/*.resolver.ts',
         baseURL: '/api',
         outputDir: '.nestbridge',
       }),
@@ -101,7 +102,7 @@ describe('nestBridge webpack plugin', () => {
     await runBuild();
 
     const declaration = readFileSync(
-      resolve(clientRoot, '.nestbridge', 'server', 'widgets.controller.d.ts'),
+      resolve(clientRoot, '.nestbridge', 'fixture-server', 'widgets.controller.d.ts'),
       'utf-8',
     );
 
@@ -129,7 +130,7 @@ describe('nestBridge webpack plugin', () => {
     await runBuild();
 
     const declaration = readFileSync(
-      resolve(clientRoot, '.nestbridge', 'server', 'user.resolver.d.ts'),
+      resolve(clientRoot, '.nestbridge', 'fixture-server', 'user.resolver.d.ts'),
       'utf-8',
     );
 

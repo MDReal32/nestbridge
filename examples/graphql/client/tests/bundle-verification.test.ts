@@ -12,10 +12,13 @@ const FORBIDDEN_PATTERNS = [
   'reflect-metadata',
   'BooksService',
   'booksService',
+  'rxjs',
+  'EventsService',
+  'eventsService',
 ];
 
 describe('client bundle verification', () => {
-  it('excludes NestJS and the real resolver implementation from the production bundle', async () => {
+  it('excludes NestJS and the real resolver and controller implementations from the production bundle', async () => {
     const clientRoot = resolve(import.meta.dirname, '..');
 
     await build({
@@ -38,5 +41,8 @@ describe('client bundle verification', () => {
     // generated GraphQL operation shape instead of a literal symbol name.
     expect(bundleContents).toContain('query FindOne');
     expect(bundleContents).toContain('mutation Create');
+
+    // The second app, the observable server, is a plain REST controller.
+    expect(bundleContents).toContain('/events/');
   });
 });

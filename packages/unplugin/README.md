@@ -50,17 +50,18 @@ nestBridgeUnplugin.farm(options); // Farm JsPlugin
 
 ```ts
 interface NestBridgeOptions {
-  name?: string;                    // names the server app; required, and unique, when you pass several apps
+  name?: string;                    // names the server app's runtime service; required, and unique, when you pass several apps; does not affect declaration paths
   controllers: string | string[];   // glob(s), resolved relative to `root`
   resolvers?: string | string[];    // glob(s) for GraphQL resolvers; defaults to none
+  messagePatterns?: boolean;        // generates client methods for the @EventPattern/@MessagePattern handlers of `controllers`; needs `name`; defaults to false; declarations always include them
   baseURL?: string;                 // origin (or mount path) for this app's REST requests and its default GraphQL endpoint; applied to the runtime automatically
   bootstrap?: string;               // the app's bootstrap file, relative to `root`; skips the `main.ts` search
   globalPrefix?: string | GlobalPrefixOption | false; // replaces the prefix read from `setGlobalPrefix()`; `false` ignores it
   versioning?: VersioningOption | false;              // replaces the versioning read from `enableVersioning()`; `false` ignores it
   debug?: boolean;                  // logs discovery/analysis/watch activity
   logLevel?: 'info' | 'warn' | 'error' | 'silent'; // how much the plugin logs; defaults to the bundler's own level (Vite's logLevel, webpack's infrastructureLogging.level)
-  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root
-  root?: string;                    // base for the app's files; relative paths resolve against Vite's root (process.cwd() under webpack), which is also the default
+  outputDir?: string;               // defaults to ".nestbridge" at the workspace root (nearest nx.json / pnpm-workspace.yaml / turbo.json / lerna.json / package.json with "workspaces"), or at the project root when there is no workspace; an explicit value is resolved from the bundler's own root; either way a server's declarations go into <outputDir>/<its package name>/
+  root?: string;                    // the server package; its package.json needs a "name", which names the declarations folder; base directory for its controllers, resolvers and bootstrap file; relative paths resolve against the bundler's root (process.cwd() under webpack), which is also the default
 }
 
 interface GlobalPrefixOption {
@@ -94,17 +95,26 @@ apps behaves like several single-app builds sharing one plugin.
 
 1. On `buildStart`, it globs `controllers`/`resolvers`, runs each file
    through [`@nestbridge/core`](../core)'s static analysis, and writes the
-   generated `.d.ts` declarations to `outputDir` — to `<outputDir>/<name>/`
-   for a named app — so TypeScript sees a client-facing shape instead of the
-   real file. A file matched by the globs of two apps is an error (a warning
+   generated `.d.ts` declarations to `<outputDir>/<package name>/` — one folder
+   per server, named after the package at `root`, with each file's path
+   mirrored relative to `root` — so TypeScript sees a client-facing shape
+   instead of the real file. Message handlers (`@EventPattern` /
+   `@MessagePattern`) are always declared; `messagePatterns` only decides
+   whether the generated client code has them. The declarations depend only on the server, so every client of it
+   writes the same files (when clients disagree on the bootstrap file, the
+   last build wins). A `root` without a named `package.json` fails the build. A file matched by the globs of two apps is an error (a warning
    in watch mode) that names both.
 2. It also locates the app's bootstrap file — the `bootstrap` option, which
    must exist, or else the single `main.ts` under `root` — and runs it through
-   `@nestbridge/core`'s `detectResponseWrapper`, `detectErrorResponseShape`,
-   `detectGlobalPrefix` and `detectVersioning`. A registered global response
-   interceptor is reflected directly in the generated controller declarations;
+   `@nestbridge/core`'s `detectErrorResponseShape`, `detectGlobalPrefix` and
+   `detectVersioning`; the same bootstrap file also feeds the controller
+   analysis, which reads the interceptors that apply to each JSON route
+   (`APP_INTERCEPTOR` providers, `useGlobalInterceptors` and `@UseInterceptors`).
+   Their response shape is reflected directly in the generated controller
+   declarations, and an interceptor it cannot read is an
+   `unsupported-interceptor` diagnostic;
    a registered `@Catch` exception filter is written to a fixed
-   `nestbridge-error-body.d.ts` file next to them. The prefix and versioning
+   `error-body.d.ts` file next to them. The prefix and versioning
    are composed into each route's path with `applyApplicationRouting`, unless
    `globalPrefix`/`versioning` state them explicitly (or `false` ignores them),
    which replaces the detection and its diagnostics. Nothing is written when
@@ -125,7 +135,9 @@ apps behaves like several single-app builds sharing one plugin.
 5. When a tracked controller, resolver, or bootstrap file changes
    (`watchChange`), it re-analyzes only the app that owns the file and rewrites
    its declarations, including the interceptor, filter, prefix and versioning
-   detection.
+   detection. The bootstrap file and the interceptor files that took part in the
+   detection are registered with the bundler's watcher (`addWatchFile`), so
+   editing them re-analyzes the app.
 
 Diagnostics from `@nestbridge/core` (an unsupported decorator, a
 non-literal route path, a global prefix or versioning setup that cannot be

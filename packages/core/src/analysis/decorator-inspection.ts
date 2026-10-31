@@ -32,6 +32,12 @@ export const findDecorator = (
   return decorators.find((decorator) => decoratorNameOf(decorator) === decoratorName);
 };
 
+export const findDecorators = (
+  node: ClassDeclaration | MethodDeclaration | ParameterDeclaration | PropertyDeclaration,
+  decoratorName: string,
+) =>
+  (getDecorators(node) ?? []).filter((decorator) => decoratorNameOf(decorator) === decoratorName);
+
 export const hasAnyDecorator = (
   node: ClassDeclaration | MethodDeclaration | ParameterDeclaration | PropertyDeclaration,
 ) => getDecorators(node) !== undefined;

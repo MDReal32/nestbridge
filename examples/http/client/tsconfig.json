@@ -5,7 +5,7 @@
     "types": [],
     "noEmit": true,
     "paths": {
-      "@server/*": ["../../../.nestbridge/examples/http/server/src/*"]
+      "@server/*": ["../../../.nestbridge/http-server/src/*"]
     }
   },
   "include": ["src", "vite.config.ts", "typecheck-fixtures"]

@@ -5,7 +5,7 @@ import type { VersioningOption } from './versioning-option';
 export interface NestBridgeOptions {
   /**
    * Identifies the server app. Required, and unique, when several apps are
-   * configured. It also names the runtime service and the declaration folder.
+   * configured. It names the runtime service and does not affect where declarations go.
    */
   name?: string;
   controllers: string | string[];
@@ -14,7 +14,8 @@ export interface NestBridgeOptions {
    * Also turns the controllers' `@EventPattern()` / `@MessagePattern()` handlers into client
    * methods that publish through `nestbridge/microservices`. Requires `name`, which is the service
    * the message client is looked up by. Off by default, so browser clients never receive
-   * microservice code.
+   * microservice code. The generated declarations always describe the message handlers, whatever
+   * this is set to.
    */
   messagePatterns?: boolean;
   baseURL?: string;
@@ -44,9 +45,14 @@ export interface NestBridgeOptions {
   /**
    * Where the generated declarations go. By default `.nestbridge` at the workspace root (the nearest
    * ancestor with `nx.json`, `pnpm-workspace.yaml`, `turbo.json`, `lerna.json` or a `package.json`
-   * with `workspaces`), shared by every app, or in the project root when there is no workspace. An
-   * explicit value is resolved from the bundler's own root and keeps the per-project layout.
+   * with `workspaces`), or in the project root when there is no workspace. An explicit value is
+   * resolved from the bundler's own root. Either way the declarations of a server go into a folder
+   * named after its package.
    */
   outputDir?: string;
+  /**
+   * The server package, resolved from the bundler's root. Its `package.json` must have a `name`,
+   * which names the server's declaration folder. Declaration paths mirror this directory.
+   */
   root?: string;
 }

@@ -24,6 +24,14 @@ interface ImportSource {
 
 const parsedFilesByPath = new Map<string, SourceFile>();
 
+/**
+ * Each analysis entry point starts from an empty cache, so a long-running watch session never
+ * resolves a class from a file version that has since changed.
+ */
+export const clearParsedFileCache = () => {
+  parsedFilesByPath.clear();
+};
+
 const parseFile = (filePath: string): SourceFile => {
   const cached = parsedFilesByPath.get(filePath);
 

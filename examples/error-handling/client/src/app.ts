@@ -1,6 +1,6 @@
 import { isNestBridgeError } from '@nestbridge/runtime';
 import { NotesController } from '@server/notes/notes.controller';
-import type { NestBridgeErrorBody } from '../../../../.nestbridge/examples/error-handling/client/nestbridge-error-body';
+import type { NestBridgeErrorBody } from '../../../../.nestbridge/error-handling-server/error-body';
 
 const notes = new NotesController();
 

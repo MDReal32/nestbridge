@@ -6,14 +6,25 @@ export default defineConfig({
   resolve: {
     alias: {
       '@server': resolve(import.meta.dirname, '../server/src'),
+      '@events': resolve(import.meta.dirname, '../../observable/server/src'),
     },
   },
   plugins: [
-    nestBridge({
-      controllers: '../server/src/**/*.controller.ts',
-      resolvers: '../server/src/**/*.resolver.ts',
-      baseURL: 'http://localhost:3500',
-    }),
+    nestBridge([
+      {
+        name: 'books',
+        root: resolve(import.meta.dirname, '../server'),
+        controllers: 'src/**/*.controller.ts',
+        resolvers: 'src/**/*.resolver.ts',
+        baseURL: 'http://localhost:3500',
+      },
+      {
+        name: 'events',
+        root: resolve(import.meta.dirname, '../../observable/server'),
+        controllers: 'src/**/*.controller.ts',
+        baseURL: 'http://localhost:3501',
+      },
+    ]),
   ],
   test: {
     environment: 'node',

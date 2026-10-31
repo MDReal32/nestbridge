@@ -6,11 +6,19 @@ import { resolveOutputLocation } from '../src/plugin/resolve-output-location';
 
 let workspace: string;
 let client: string;
+let server: string;
+
+const writeManifest = (directory: string, manifest: object) => {
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest));
+};
 
 beforeEach(() => {
   workspace = realpathSync(mkdtempSync(join(tmpdir(), 'nestbridge-output-')));
   client = join(workspace, 'apps/web/client');
+  server = join(workspace, 'apps/web/server');
   mkdirSync(client, { recursive: true });
+  writeManifest(server, { name: 'web-server' });
 });
 
 afterEach(() => {
@@ -18,51 +26,44 @@ afterEach(() => {
 });
 
 describe('resolveOutputLocation', () => {
-  it('defaults to the workspace root and mirrors paths relative to it', () => {
+  it('declares into a folder named after the server package under the workspace root', () => {
     writeFileSync(join(workspace, 'nx.json'), '{}');
 
     const location = resolveOutputLocation({
       outputDir: undefined,
-      name: undefined,
-      root: client,
+      root: server,
       bundlerRoot: client,
     });
 
     expect(location).toEqual({
       outputDir: join(workspace, '.nestbridge'),
-      declarationDir: join(workspace, '.nestbridge'),
-      errorBodyDir: join(workspace, '.nestbridge/apps/web/client'),
-      mirrorRoot: workspace,
+      declarationDir: join(workspace, '.nestbridge/web-server'),
     });
   });
 
-  it('keeps the workspace default per named app', () => {
+  it('nests a scoped package name', () => {
     writeFileSync(join(workspace, 'nx.json'), '{}');
+    writeManifest(server, { name: '@acme/api' });
 
     const location = resolveOutputLocation({
       outputDir: undefined,
-      name: 'identity',
-      root: client,
+      root: server,
       bundlerRoot: client,
     });
 
-    expect(location.declarationDir).toBe(join(workspace, '.nestbridge/identity'));
-    expect(location.errorBodyDir).toBe(join(workspace, '.nestbridge/apps/web/client/identity'));
+    expect(location.declarationDir).toBe(join(workspace, '.nestbridge/@acme/api'));
   });
 
   it('falls back to the project root when no workspace is found', () => {
     const location = resolveOutputLocation({
       outputDir: undefined,
-      name: undefined,
-      root: client,
+      root: server,
       bundlerRoot: client,
     });
 
     expect(location).toEqual({
       outputDir: join(client, '.nestbridge'),
-      declarationDir: join(client, '.nestbridge'),
-      errorBodyDir: join(client, '.nestbridge'),
-      mirrorRoot: client,
+      declarationDir: join(client, '.nestbridge/web-server'),
     });
   });
 
@@ -71,16 +72,38 @@ describe('resolveOutputLocation', () => {
 
     const location = resolveOutputLocation({
       outputDir: 'generated',
-      name: undefined,
-      root: client,
+      root: server,
       bundlerRoot: client,
     });
 
     expect(location).toEqual({
       outputDir: join(client, 'generated'),
-      declarationDir: join(client, 'generated'),
-      errorBodyDir: join(client, 'generated'),
-      mirrorRoot: client,
+      declarationDir: join(client, 'generated/web-server'),
     });
+  });
+
+  it('fails when the root has no package.json', () => {
+    const bare = join(workspace, 'apps/bare');
+    mkdirSync(bare, { recursive: true });
+
+    expect(() =>
+      resolveOutputLocation({ outputDir: undefined, root: bare, bundlerRoot: client }),
+    ).toThrow(/bare[\\/]package\.json has no "name"/);
+  });
+
+  it('fails when the package.json has no name', () => {
+    writeManifest(server, { version: '1.0.0' });
+
+    expect(() =>
+      resolveOutputLocation({ outputDir: undefined, root: server, bundlerRoot: client }),
+    ).toThrow(/has no "name"/);
+  });
+
+  it('fails when the package name is empty', () => {
+    writeManifest(server, { name: '' });
+
+    expect(() =>
+      resolveOutputLocation({ outputDir: undefined, root: server, bundlerRoot: client }),
+    ).toThrow(/has no "name"/);
   });
 });
