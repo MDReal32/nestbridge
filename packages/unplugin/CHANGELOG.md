@@ -1,5 +1,44 @@
 # @nestbridge/unplugin
 
+## 3.0.0
+
+### Major Changes
+
+- b5009b4: Every server now has one declaration folder, named after the package at its `root`, with the same layout everywhere. Declarations are written to `<outputDir>/<package name>/`, where `outputDir` is the explicit option, the workspace-root `.nestbridge`, or the project-root `.nestbridge` when there is no workspace. Paths inside the folder mirror the files relative to `root`, so `src/items/items.controller.ts` of a package named `http-server` becomes `.nestbridge/http-server/src/items/items.controller.d.ts`. A scoped name nests (`.nestbridge/@acme/api/`). The error body declaration is `error-body.d.ts` in the same folder (it was `nestbridge-error-body.d.ts` next to the client). The `name` option no longer affects any path: it only names the runtime service.
+  
+  `root` must point at the server package, and its `package.json` must have a non-empty `name`; otherwise the build fails with an error that says so.
+  
+  Declarations depend only on the server, so any number of clients of a server write the same files and share one folder. Message methods (`@EventPattern` / `@MessagePattern`) are always written to the declarations; `messagePatterns` now only decides whether the generated client module has the message methods, and whether `unsupported-message-pattern` diagnostics are reported. Every client of a server should state the same `bootstrap` option; when they disagree, the last build wins.
+  
+  Upgrading:
+  
+  1. Set `root` to the server package (for example `root: '../server'`) and make the globs relative to it (`controllers: 'src/**/*.controller.ts'`). Give the server's `package.json` a `name`.
+  2. Change tsconfig `paths` to `.nestbridge/<server package name>/src/*`, for example `"@server/*": ["../../../.nestbridge/http-server/src/*"]`.
+  3. Change error body imports to `.nestbridge/<server package name>/error-body`.
+  4. Delete the old `.nestbridge/` output.
+  
+  See `MIGRATION.md`.
+
+### Minor Changes
+
+- b5009b4: Response-shaping interceptors are now detected per route instead of as one app-wide wrapper, and anything that cannot be read is reported instead of silently ignored.
+  
+  Each JSON route gets its own interceptor chain, outermost first: `APP_INTERCEPTOR` providers (`useClass` only, read from the root module and the modules it imports), then `app.useGlobalInterceptors(new X())`, then the controller's `@UseInterceptors`, then the method's `@UseInterceptors`. `intercept()` may hold any statements before its final `return`; the returned `next.handle()` may be piped through any number of operators. `map` operators compose in order, `tap`, `timeout` and `finalize` are shape-neutral, and a bare `return next.handle()` changes nothing. Shorthand properties (`{ data }`) and `-`, `*`, `/`, `%` arithmetic (typed `number`) are understood in `map` bodies. Message handlers and GraphQL resolvers are not wrapped yet.
+  
+  An interceptor that cannot be analyzed (another operator, a `useFactory` / `useValue` / `useExisting` / spread provider, a class from a package, an unreadable `map` body, a `@UseInterceptors` argument that is not a class or `new X()`) is a new `unsupported-interceptor` diagnostic, reported once per interceptor at its source location. The JSON routes under it are declared as `AbortablePromise<unknown>`. A one-shot build fails on the diagnostic; watch mode warns.
+  
+  Breaking changes to `@nestbridge/core`:
+  
+  - `detectResponseWrapper` is removed. `analyzeControllers(files, { bootstrapFilePath })` now attaches an optional `responseWrapper` to each JSON method of the result and returns `interceptorFiles`, the files that took part in the detection.
+  - `generateControllerDeclaration(definition, outputFilePath)` no longer takes a response wrapper argument; it reads each method's own `responseWrapper`. A declaration can now hold several `__NestBridgeWrapped` helper aliases (`__NestBridgeWrapped`, `__NestBridgeWrapped2`, ...), one per distinct shape. Controllers without a response-shaping interceptor produce the same output as before.
+  
+  `@nestbridge/unplugin` passes the bootstrap file to the controller analysis, re-analyzes when a file that contributed to interceptor detection changes, and registers those files and the bootstrap file with the bundler's watcher.
+
+### Patch Changes
+
+- Updated dependencies [b5009b4]
+  - @nestbridge/core@3.0.0
+
 ## 2.6.1
 
 ### Patch Changes
